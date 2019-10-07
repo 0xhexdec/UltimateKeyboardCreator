@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion360",
+	"type":	"script",
+	"author":	"Julian Pleines",
+	"description":	{
+		"":	"Simple Script to create a 3D-Printable Keyboard"
+	},
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true
+}
