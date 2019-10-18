@@ -1,11 +1,32 @@
-import adsk.core, adsk.fusion, adsk.cam, traceback
-import io, json, types, os, sys
+# Author-Julian Pleines
+# Parses the LayoutFile (json) for any keyboard Layout
 
-def parseFile(filename: str):
+import io
+import json
+import traceback
+
+import adsk.cam
+import adsk.core
+import adsk.fusion
+
+from .KeyboardData import KeyboardData
+
+
+# gets all files from the defaultLayouts folder to populate the Dropdown
+def getDefaultLayouts():
+    return None
+
+
+# gets all files from the customLayouts folder to populate the Dropdown
+def getCustomLayouts():
+    return None
+
+
+def parseFile(filename: str, keyboardData: KeyboardData):
     # Code to react to the event.
     try:
         app = adsk.core.Application.get()
-        ui  = app.userInterface
+        ui = app.userInterface
 
         with io.open(filename, 'r', encoding='utf-8-sig') as file:
             data = file.read()
@@ -15,12 +36,14 @@ def parseFile(filename: str):
             columnPosition = 0.0
             size = 1.0
             heightOffset = 0.0
+            keys = 0
             for row in layoutData:
                 layoutRow = []
                 columnPosition = 0.0
                 for entry in row:
                     if isinstance(entry, str):
-                        layoutRow.append([columnPosition + (size/2) , rowPosition + heightOffset, size])
+                        layoutRow.append([columnPosition + (size / 2), rowPosition + heightOffset, size])
+                        keys += 1
                         columnPosition += size
                         size = 1.0
                         heightOffset = 0.0
@@ -42,16 +65,16 @@ def parseFile(filename: str):
                                 # rowPosition += entry["y"]
                                 print("Do nothing")
                             if key == "h":
-                                heightOffset = (entry["h"] - 1.0)/2.0
+                                heightOffset = (entry["h"] - 1.0) / 2.0
                             if key == "h2":
                                 # rowPosition += entry["y"]
                                 print("Do nothing")
                     else:
                         print("something unknown")
-                rowPosition += 1 
+                rowPosition += 1
                 layout.append(layoutRow)
-            # print(layout)
-            return layout
+            keyboardData.keys = keys
+            keyboardData.keyboardLayout = layout
             
     except:
         if ui:
