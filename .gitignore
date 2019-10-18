@@ -1,5 +1,3 @@
-__pycache__/parser.cpython-37.pyc
-__pycache__/sketchCreation.cpython-37.pyc
-.vscode/settings.json
-.vscode/launch.json
+__pycache__/
+.vscode/
 resources/Layouts/ISO62_MOD.json
