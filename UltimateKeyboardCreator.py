@@ -1,6 +1,8 @@
 # Author-Julian Pleines
 # Description-Simple Script to create a 3D-Printable Keyboard
 
+import importlib
+import importlib.util
 import os
 import traceback
 
@@ -8,18 +10,24 @@ import adsk.cam
 import adsk.core
 import adsk.fusion
 
-from .LayoutFileParser import parseFile
-# from .Sketch import createFitCheckerSketch, createFitCheckerSketches, createSwtichPocket, createPlateBorder
+from .LayoutFileParser import parseFile, getDefaultLayouts
 from . import FitChecker
 from . import Layout
 from .KeyboardData import KeyboardData
+from . import Frame
+
+from .modules.frames.AbstractFrame import AbstractFrame
+
+# from .modules.frames.UKC_Default import UKC_Default
 
 # Global list to keep all event handlers in scope.
 handlers = []
-# layout = []
-# layoutName = "ANSI 104 (100%)"
 progressSteps = 0
 keyboardData: KeyboardData = KeyboardData()
+# holds all layouts in the layouts folder
+layouts: dict = {}
+# holds all frame modules
+frames: dict = {}
 
 
 def run(context):
@@ -62,6 +70,8 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
 
         global keyboardData
+        global layouts
+        global frames
 
         # Get the command
         cmd = eventArgs.command
@@ -91,7 +101,7 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         expertSettingsGroup = expertSettings.children
         expertSettingsGroup.addValueInput("switchWidth", "Switch Width", "mm", adsk.core.ValueInput.createByReal(1.4))
         expertSettingsGroup.addValueInput("switchDepth", "Switch Depth", "mm", adsk.core.ValueInput.createByReal(1.4))
-        
+
         parametricBox = expertSettingsGroup.addBoolValueInput("parametricBox", "Parametric Model", True, "", False)
         parametricBox.tooltip = "Generates the Model as full parametric model"
         parametricBox.tooltipDescription = "Generates the sketches with parametric values, editable in the parameters Window. This makes it easy to tweak some settings, not needed if the general fit is good and you only want to create your own Frame"
@@ -132,18 +142,20 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         keyboardLayoutDropdown = layoutChildren.addDropDownCommandInput("keyboardLayoutDropdown", "Keyboard Layout", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
         keyboardLayoutDropdown.tooltip = "Select your desired keyboard layout"
         keyboardLayoutDropdown.tooltipDescription = "Select your keyboard layout from the list or choose a custom layout (to do this, go to http://www.keyboard-layout-editor.com and design your own, export it as json and import it here)"
-        keyboardLayoutDropdown.listItems.add("ISO 105 (100%)", False, "")
-        keyboardLayoutDropdown.listItems.add("ANSI 104 (100%)", True, "")
-        keyboardLayoutDropdown.listItems.add("ANSI 104 Big-Ass (100%)", False, "")
-        keyboardLayoutDropdown.listItems.add("ISO 88 (80%)", False, "")
-        keyboardLayoutDropdown.listItems.add("ANSI 87 (80%)", False, "")
-        keyboardLayoutDropdown.listItems.add("Keycool 84 (75%)", False, "")
-        keyboardLayoutDropdown.listItems.add("ISO 62 (60%)", False, "")
-        keyboardLayoutDropdown.listItems.add("ANSI 61 (60%)", False, "")
+        # TODO autopopulate based on files in folder
+        layouts = getDefaultLayouts()
+        first = True
+        for key in layouts:
+            keyboardLayoutDropdown.listItems.add(key, first, "")
+            first = False
         keyboardLayoutDropdown.listItems.add("Custom Layout", False, "")
 
         fileButton = layoutChildren.addBoolValueInput("fileButton", "Layout JSON", False, "./resources/icons/Folder", False)
         fileButton.isVisible = False
+
+        supportWidth = layoutChildren.addValueInput("supportWidthValue", "Support Keys wider than", "", adsk.core.ValueInput.createByReal(2.0))
+        supportWidth.tooltip = "Support Keys that are wider than this value in units with stabilizers"
+        supportWidth.tooltipDescription = "If a key is wider than one unit (default key size), jamming could become an issue. Stabilizers are available in 2u, 6.25u and 7u. (1 default unit is 19.05mm or 0.75inches)"
 
         doubleSpaceSwitch = layoutChildren.addBoolValueInput("doubleSpaceSwitch", "Double Switch for Space", True, "", False)
         doubleSpaceSwitch.tooltip = "Use two switches for the spacebar instead of stabilizers"
@@ -160,14 +172,22 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         frameChildren = frameTab.children
 
         frameDropDown = frameChildren.addDropDownCommandInput("frameDropDown", "Frame Type", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
-        frameDropDown.listItems.add("UKC Default", True, "")
+        # TODO autopopulate based on modules in folder
+        frames = Frame.getFrames()
+        first = True
+        for key in frames:
+            frameDropDown.listItems.add(key, first, "")
+            first = False
+
+        # frameDropDown.listItems.add("UKC Default", True, "")
 
         # ---------------------------------- KEYCAPS TAB -------------------------------------------
-        keycapsTab = cmdInputs.addTabCommandInput("keycapsTab", "Keycaps")
-        keycapsChildren = keycapsTab.children
+        # keycapsTab = cmdInputs.addTabCommandInput("keycapsTab", "Keycaps")
+        # keycapsChildren = keycapsTab.children
 
-        keycapsTab.isVisible = False
+        # keycapsTab.isVisible = False
 
+        # TODO FIX THIS
         parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ANSI104.json", keyboardData)
 
         # Connect to the execute event.
@@ -204,6 +224,7 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
         inputs = adsk.core.CommandInputs.cast(eventArgs.firingEvent.sender.commandInputs)
         
         global keyboardData
+        global frames
 
         changedInput = eventArgs.input
         if changedInput.id == 'fileButton':
@@ -212,6 +233,7 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             openFile()
             button.value = False
             button.isEnabled = True
+
         elif changedInput.id == "keyboardLayoutDropdown":
             dropdown = adsk.core.DropDownCommandInput.cast(inputs.itemById("keyboardLayoutDropdown"))
             selectedItem = dropdown.selectedItem
@@ -222,23 +244,7 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             else:
                 button.isVisible = False
                 keyboardData.layoutName = selectedItem.name
-
-            if selectedItem.name == "ISO 105 (100%)":
-                parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ISO105.json", keyboardData)
-            if selectedItem.name == "ANSI 104 (100%)":
-                parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ANSI104.json", keyboardData)
-            if selectedItem.name == "ANSI 104 Big-Ass (100%)":
-                parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ANSI104BIGASS.json", keyboardData)
-            if selectedItem.name == "ISO 88 (80%)":
-                parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ISO88.json", keyboardData)
-            if selectedItem.name == "ANSI 87 (80%)":
-                parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ANSI87.json", keyboardData)
-            if selectedItem.name == "Keycool 84 (75%)":
-                parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/KEYCOOL84.json", keyboardData)
-            if selectedItem.name == "ISO 62 (60%)":
-                parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ISO62.json", keyboardData)
-            if selectedItem.name == "ANSI 61 (60%)":
-                parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ANSI61.json", keyboardData)
+                parseFile(layouts[selectedItem.name], keyboardData)
 
         elif changedInput.id == 'makePrintableBox':
             button = adsk.core.BoolValueCommandInput.cast(inputs.itemById('makePrintableBox'))
@@ -255,6 +261,17 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                 group.isVisible = True
             else:
                 group.isVisible = False
+
+        elif changedInput.id == "frameDropDown":
+            dropdown = adsk.core.DropDownCommandInput.cast(inputs.itemById("frameDropDown"))
+            selectedItem = dropdown.selectedItem
+            keyboardData.frame = selectedItem.name
+            name = frames[selectedItem.name]
+            if name.endswith("_"):
+                cls = getattr(importlib.import_module(".modules.frames." + name, __name__), "Frame")
+            else:
+                cls = getattr(importlib.import_module(".modules.frames." + name, __name__), name)
+            keyboardData.frameModule: AbstractFrame = cls()
 
 
 class KCDestroyHandler(adsk.core.CommandEventHandler):
@@ -321,6 +338,8 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
             Layout.create(progressDialog, comp, keyboardData)
 
             # --------------------------- FRAME CREATION  -----------------------------------------
+
+            keyboardData.frameModule.generateFrame()
 
             progressDialog.hide()
         except:

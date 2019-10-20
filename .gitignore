@@ -1,3 +1,4 @@
 __pycache__/
 .vscode/
-resources/Layouts/ISO62_MOD.json
+resources/defaultLayouts/ISO62_MOD.json
+resources/defaultLayouts/modified-iso-60%.json
