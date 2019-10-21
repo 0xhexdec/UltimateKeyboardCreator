@@ -1,10 +1,9 @@
-# from dataclasses import dataclass
-
-from .modules.frames.AbstractFrame import AbstractFrame
 
 
 class KeyboardData:
     def __init__(self):
+        from .modules.frames.AbstractFrame import AbstractFrame
+
         self.keyboardLayout: list = []
         self.layoutName: str = "ANSI 104 (100%)"
         self.frame: str = ""
@@ -19,5 +18,6 @@ class KeyboardData:
         self.plateThickness: float = 0.4
         self.frameOverPlateHeight: float = 0.6
         self.unit: float = 1.905
+        self.keyboardHeightInUnits: float = 0
         self.parametricModel: bool = False
         self.fixedSketch: bool = True

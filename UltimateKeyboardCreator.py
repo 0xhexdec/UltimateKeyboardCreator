@@ -3,7 +3,6 @@
 
 import importlib
 import importlib.util
-import os
 import traceback
 
 import adsk.cam
@@ -18,7 +17,6 @@ from . import Frame
 
 from .modules.frames.AbstractFrame import AbstractFrame
 
-# from .modules.frames.UKC_Default import UKC_Default
 
 # Global list to keep all event handlers in scope.
 handlers = []
@@ -38,9 +36,6 @@ def run(context):
 
         # Get the CommandDefinitions collection.
         cmdDefs = ui.commandDefinitions
-
-#        sel = ui.activeSelections.item(0).entity.objectType
-#        ui.messageBox("Type: " + sel)
 
         # Create a button command definition.
         keyboardCreator = cmdDefs.addButtonDefinition('KeyboardCreatorButtonId',
@@ -75,8 +70,8 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
 
         # Get the command
         cmd = eventArgs.command
-        cmd.setDialogInitialSize(200, 400)
-        cmd.setDialogMinimumSize(200, 400)
+        cmd.setDialogInitialSize(300, 400)
+        cmd.setDialogMinimumSize(300, 400)
         cmd.okButtonText = "Create"
 
         # Get the CommandInputs collection to create new command inputs.
@@ -108,7 +103,7 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         
         fixedSketchBox = expertSettingsGroup.addBoolValueInput("fixedSketchBox", "Fixed Sketch", True, "", True)
         fixedSketchBox.tooltip = "Makes all sketch lines fixed"
-        # fixedSketchBox.tooltipDescription = "Generates the Sketches with parametric values, editable in the parameters Window. This makes it Easy to tweak some settings, not needed if the general fit is good and you only want to create your own Frame"
+        fixedSketchBox.tooltipDescription = "Generates the Sketches with parametric values, editable in the parameters Window. This makes it Easy to tweak some settings, not needed if the general fit is good and you only want to create your own Frame"
         
         frameBox = expertSettingsGroup.addBoolValueInput("createFrameBox", "Create Frame", True, "", True)
         frameBox.tooltip = "Creates the frame for the Keyboard"
@@ -142,7 +137,7 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         keyboardLayoutDropdown = layoutChildren.addDropDownCommandInput("keyboardLayoutDropdown", "Keyboard Layout", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
         keyboardLayoutDropdown.tooltip = "Select your desired keyboard layout"
         keyboardLayoutDropdown.tooltipDescription = "Select your keyboard layout from the list or choose a custom layout (to do this, go to http://www.keyboard-layout-editor.com and design your own, export it as json and import it here)"
-        # TODO autopopulate based on files in folder
+        
         layouts = getDefaultLayouts()
         first = True
         for key in layouts:
@@ -172,14 +167,11 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         frameChildren = frameTab.children
 
         frameDropDown = frameChildren.addDropDownCommandInput("frameDropDown", "Frame Type", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
-        # TODO autopopulate based on modules in folder
         frames = Frame.getFrames()
         first = True
         for key in frames:
             frameDropDown.listItems.add(key, first, "")
             first = False
-
-        # frameDropDown.listItems.add("UKC Default", True, "")
 
         # ---------------------------------- KEYCAPS TAB -------------------------------------------
         # keycapsTab = cmdInputs.addTabCommandInput("keycapsTab", "Keycaps")
@@ -187,8 +179,15 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
 
         # keycapsTab.isVisible = False
 
-        # TODO FIX THIS
-        parseFile(os.path.dirname(__file__) + "/resources/defaultLayouts/ANSI104.json", keyboardData)
+        # set up the default layout and frame
+        parseFile(layouts[keyboardLayoutDropdown.selectedItem.name], keyboardData)
+        keyboardData.frame = frameDropDown.selectedItem.name
+        name = frames[frameDropDown.selectedItem.name]
+        if name.endswith("_"):
+            cls = getattr(importlib.import_module(".modules.frames." + name, __name__), "Frame")
+        else:
+            cls = getattr(importlib.import_module(".modules.frames." + name, __name__), name)
+        keyboardData.frameModule: AbstractFrame = cls()
 
         # Connect to the execute event.
         onExecute = KCCommandExecuteHandler()
@@ -206,9 +205,6 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         onDestroy = KCDestroyHandler()
         cmd.destroy.add(onDestroy)
         handlers.append(onDestroy)
-
-        ######################### ONLY FOR DEBUGGING ##################################
-        # openFile()
 
 
 # Event handler for the inputChanged event
@@ -338,8 +334,8 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
             Layout.create(progressDialog, comp, keyboardData)
 
             # --------------------------- FRAME CREATION  -----------------------------------------
-
-            keyboardData.frameModule.generateFrame()
+            progressDialog.message = "Creating Frame"
+            keyboardData.frameModule.generateFrame(keyboardData, comp)
 
             progressDialog.hide()
         except:

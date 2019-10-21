@@ -80,28 +80,29 @@ def parseFile(filename: str, keyboardData: KeyboardData):
                                         size = entry[key]
                                     if key == "w2":
                                         # rowPosition += entry["y"]
-                                        print("Do nothing")
+                                        print("w2 argument not handled")
                                     if key == "x":
                                         columnPosition += entry[key]
                                     if key == "x2":
                                         # columnPosition += entry["x"]
-                                        print("Do nothing")
+                                        print("x2 argument not handled")
                                     if key == "y":
                                         rowPosition += entry[key]
                                     if key == "y2":
                                         # rowPosition += entry["y"]
-                                        print("Do nothing")
+                                        print("y2 argument not handled")
                                     if key == "h":
                                         heightOffset = (entry[key] - 1.0) / 2.0
                                     if key == "h2":
                                         # rowPosition += entry["y"]
-                                        print("Do nothing")
+                                        print("h2 argument not handled")
                             else:
                                 print("something unknown")
                         rowPosition += 1
                         layout.append(layoutRow)
                     keyboardData.keys = keys
                     keyboardData.keyboardLayout = layout
+                    keyboardData.keyboardHeightInUnits = rowPosition
             else:
                 if ui:
                     ui.messageBox("Layout JSON not parsable!")

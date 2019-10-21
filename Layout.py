@@ -1,13 +1,15 @@
 # Author-Julian Pleines
 # Creates the Layout Body for the Keyboard
 
-import math
+# import math
 
 import adsk.fusion
 import adsk.core
 
 from .Sketch import switchCutout, switchHookCutouts, createPlateBorder
 from .KeyboardData import KeyboardData
+
+Point = adsk.core.Point3D.create
 
 
 def create(progressDialog: adsk.core.ProgressDialog, component: adsk.fusion.Component, keyboardData: KeyboardData):
@@ -28,29 +30,28 @@ def create(progressDialog: adsk.core.ProgressDialog, component: adsk.fusion.Comp
 
     createLayoutSketches(plateSketch, cutoutSketch, hooksSketch, progressDialog, keyboardData)
 
-    # plateSketch.isLightBulbOn = False
-    # cutoutSketch.isLightBulbOn = False
-    # hooksSketch.isLightBulbOn = False
+    progressDialog.message = "Recomputing sketches"
     plateSketch.isComputeDeferred = False
     cutoutSketch.isComputeDeferred = False
     hooksSketch.isComputeDeferred = False
-    progressDialog.message = "Recomputing sketches"
 
     # --------------------------- LAYOUT EXTRUDE --------------------------------------------------
 
     # create the basic frame
     plateProfile = plateSketch.profiles.item(0)
 
-    progressDialog.message = "Creating Extrusion"
+    progressDialog.message = "Creating Extrusion 1/3"
     extInput = component.features.extrudeFeatures.createInput(plateProfile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
     distance = adsk.core.ValueInput.createByReal(keyboardData.plateThickness)
     extInput.setDistanceExtent(False, distance)
+    progressDialog.message = "Extruding 1/3"
     extrude = component.features.extrudeFeatures.add(extInput)
     extrude.bodies.item(0).name = "Layout Plate"
 
     cutouts = cutoutSketch.profiles
 
     # finding the outer loop thus the profile responsible for the overall shape
+    progressDialog.message = "Creating Extrusion 2/3"
     collection = adsk.core.ObjectCollection.create()
     for prof in cutouts:
         progressDialog.progressValue += 1
@@ -60,8 +61,10 @@ def create(progressDialog: adsk.core.ProgressDialog, component: adsk.fusion.Comp
     extInput = component.features.extrudeFeatures.createInput(collection, adsk.fusion.FeatureOperations.CutFeatureOperation)
     distance = adsk.core.ValueInput.createByReal(keyboardData.plateThickness)
     extInput.setDistanceExtent(False, distance)
+    progressDialog.message = "Extruding 2/3"
     extrude = component.features.extrudeFeatures.add(extInput)
 
+    progressDialog.message = "Creating Extrusion 3/3"
     hooks = hooksSketch.profiles
     collection.clear()
     for prof in hooks:
@@ -72,22 +75,29 @@ def create(progressDialog: adsk.core.ProgressDialog, component: adsk.fusion.Comp
     extInput = component.features.extrudeFeatures.createInput(collection, adsk.fusion.FeatureOperations.CutFeatureOperation)
     distance = adsk.core.ValueInput.createByReal(keyboardData.plateThickness - keyboardData.switchHookHeight)
     extInput.setDistanceExtent(False, distance)
+    progressDialog.message = "Extruding 3/3"
     extrude = component.features.extrudeFeatures.add(extInput)
+
+    # plateSketch.isLightBulbOn = True
+    # cutoutSketch.isLightBulbOn = True
+    # hooksSketch.isLightBulbOn = True
 
 
 def createLayoutSketches(plateSketch: adsk.fusion.Sketch, cutoutSketch: adsk.fusion.Sketch, hooksSketch: adsk.fusion.Sketch, progressDialog: adsk.core.ProgressDialog, keyboardData: KeyboardData):
     maxX = 0.0
     maxY = 0.0
+    key = 1
+    xOffset = (keyboardData.unit - keyboardData.switchWidth) / 2
+    yOffset = (keyboardData.switchDepth / 2) + (keyboardData.unit - keyboardData.switchWidth)
     # creating the switch pockets
-    progressDialog.message = "Creating Keyboard Layout sketch"
     for row in keyboardData.keyboardLayout:
         for entry in row:
             progressDialog.progressValue += 1
-            switchCutout(cutoutSketch, entry[0] * keyboardData.unit, -(entry[1] + 1) * keyboardData.unit, keyboardData)
-            switchHookCutouts(hooksSketch, entry[0] * keyboardData.unit, -(entry[1] + 1) * keyboardData.unit, keyboardData)
-            if entry[0] > maxX:
-                maxX = math.ceil(entry[0])
-            if entry[1] > maxY:
-                maxY = math.ceil(entry[1])
+            progressDialog.message = "Sketching Keys (" + str(key) + "/" + str(keyboardData.keys) + ")"
+            key += 1
+            switchCutout(cutoutSketch, (entry[0] * keyboardData.unit) + xOffset, (((keyboardData.keyboardHeightInUnits - 1) - entry[1]) * keyboardData.unit) + yOffset, keyboardData)
+            switchHookCutouts(hooksSketch, (entry[0] * keyboardData.unit) + xOffset, (((keyboardData.keyboardHeightInUnits - 1) - entry[1]) * keyboardData.unit) + yOffset, keyboardData)
+            if entry[0] + (entry[2] / 2) > maxX:
+                maxX = entry[0] + (entry[2] / 2)
     # creating the outer border
-    createPlateBorder(plateSketch, (maxX + 1) * keyboardData.unit, (maxY + 1) * keyboardData.unit, keyboardData)
+    createPlateBorder(plateSketch, (maxX * keyboardData.unit) + (keyboardData.unit - keyboardData.switchWidth), (keyboardData.keyboardHeightInUnits * keyboardData.unit) + (keyboardData.unit - keyboardData.switchWidth), keyboardData)

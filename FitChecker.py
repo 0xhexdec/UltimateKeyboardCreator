@@ -102,13 +102,13 @@ def createFitCheckerSketch(sketch: adsk.fusion.Sketch, keyboardData: KeyboardDat
 
 def createFitCheckerSketches(frameSketch: adsk.fusion.Sketch, cutoutSketch: adsk.fusion.Sketch, hooksSketch: adsk.fusion.Sketch, progressDialog: adsk.core.ProgressDialog, keyboardData: KeyboardData):
     createPlateBorder(frameSketch, 0.505 + (3.75 * keyboardData.unit), 0.505 + keyboardData.switchHookDepth + (3 * keyboardData.unit), keyboardData)
-    offset = 0.0
+    offset = 0.75
     for y in range(3):
         for x in range(3):
-            switchCutout(cutoutSketch, 0.505 + (x + offset) * keyboardData.unit, -(1 + y) * keyboardData.unit, keyboardData)
-            switchHookCutouts(hooksSketch, 0.505 + (x + offset) * keyboardData.unit, -(1 + y) * keyboardData.unit, keyboardData)
+            switchCutout(cutoutSketch, 0.505 + (x + offset) * keyboardData.unit, (1 + y) * keyboardData.unit, keyboardData)
+            switchHookCutouts(hooksSketch, 0.505 + (x + offset) * keyboardData.unit, (1 + y) * keyboardData.unit, keyboardData)
             progressDialog.progressValue += 1
-        if offset == 0:
+        if offset == 0.5:
+            offset = 0
+        elif offset == 0.75:
             offset = 0.5
-        elif offset == 0.5:
-            offset = 0.75
