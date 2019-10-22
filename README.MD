@@ -59,7 +59,7 @@ default location for `Skrips` folder on Windows: `%appdata%\Autodesk\Autodesk Fu
 
 or on Mac: `~/Library/Application Support/Autodesk/Autodesk Fusion 360/API/Scripts`
 
-Than, start up your Fusion360.
+Then, start up your Fusion360.
 
 To run the skript either (weirdly, this is not possible right after startup)
 
@@ -82,7 +82,7 @@ The UKC comes with a variety of different Keyboard Layouts. If you are looking f
 
 ### [Creating a custom Keyboard](#creating-a-custom-keyboard)
 
-If you are willing to costumize your keyboard from the ground up, you can deactivate some features and design your Kayboard frame around the ready-to-use layout plate.
+If you are willing to costumize your keyboard from the ground up, you can deactivate some features and design your Keyboard frame around the ready-to-use layout plate.
 
 ## [Build-In Layouts](#build-in-layouts)
 

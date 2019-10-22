@@ -83,38 +83,42 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         generalChildren = generalTab.children
 
         printableBox = generalChildren.addBoolValueInput("makePrintableBox", "Make Printable", True, "", True)
+        # TODO make visible again if the feature exists
+        printableBox.isVisible = False
         printableBox.tooltip = "Slices the Keyboard into printable parts"
         printableBox.tooltipDescription = "The printable Keyboard is sliced into printable sizes. The parts are equipped with alignment pins and split so they fit your printer"
 
-        expertModeBox = generalChildren.addBoolValueInput("expertModeBox", "Expert Mode", True, "", False)
-        expertModeBox.tooltip = "Enables the Expert mode"
-        expertModeBox.tooltipDescription = "USE WITH CAUTION! \nThe Expert mode lets you finetune dimensions for the switches you are using, the spacing between switches (to create non-standard Keyboards) and other advances values."
+        advancedSettingsBox = generalChildren.addBoolValueInput("advancedSettingsBox", "Advanced Settings", True, "", False)
+        advancedSettingsBox.tooltip = "Enables the advanced settings"
+        advancedSettingsBox.tooltipDescription = "USE WITH CAUTION! \nThe advanced settings are for finetuning dimensions for the switches you are using, the spacing between switches (to create non-standard Keyboards) and other advances values."
         
-        expertSettings = generalChildren.addGroupCommandInput("expertSettings", "Expert Settings")
-        expertSettings.isExpanded = True
-        expertSettings.isVisible = False
-        expertSettingsGroup = expertSettings.children
-        expertSettingsGroup.addValueInput("switchWidth", "Switch Width", "mm", adsk.core.ValueInput.createByReal(1.4))
-        expertSettingsGroup.addValueInput("switchDepth", "Switch Depth", "mm", adsk.core.ValueInput.createByReal(1.4))
+        advancedSettings = generalChildren.addGroupCommandInput("advancedSettings", "Advanced Settings")
+        advancedSettings.isExpanded = True
+        advancedSettings.isVisible = False
+        advancedSettingsGroup = advancedSettings.children
+        advancedSettingsGroup.addValueInput("switchWidth", "Switch Width", "mm", adsk.core.ValueInput.createByReal(1.4))
+        advancedSettingsGroup.addValueInput("switchDepth", "Switch Depth", "mm", adsk.core.ValueInput.createByReal(1.4))
 
-        parametricBox = expertSettingsGroup.addBoolValueInput("parametricBox", "Parametric Model", True, "", False)
+        parametricBox = advancedSettingsGroup.addBoolValueInput("parametricBox", "Parametric Model", True, "", False)
         parametricBox.tooltip = "Generates the Model as full parametric model"
         parametricBox.tooltipDescription = "Generates the sketches with parametric values, editable in the parameters Window. This makes it easy to tweak some settings, not needed if the general fit is good and you only want to create your own Frame"
         
-        fixedSketchBox = expertSettingsGroup.addBoolValueInput("fixedSketchBox", "Fixed Sketch", True, "", True)
+        fixedSketchBox = advancedSettingsGroup.addBoolValueInput("fixedSketchBox", "Fixed Sketch", True, "", True)
         fixedSketchBox.tooltip = "Makes all sketch lines fixed"
         fixedSketchBox.tooltipDescription = "Generates the Sketches with parametric values, editable in the parameters Window. This makes it Easy to tweak some settings, not needed if the general fit is good and you only want to create your own Frame"
         
-        frameBox = expertSettingsGroup.addBoolValueInput("createFrameBox", "Create Frame", True, "", True)
+        frameBox = advancedSettingsGroup.addBoolValueInput("createFrameBox", "Create Frame", True, "", True)
         frameBox.tooltip = "Creates the frame for the Keyboard"
         frameBox.tooltipDescription = "If you ditch the frame creation, only the layout plate will be generated so it's easy to create your own frame."
 
-        fitCheckerBox = expertSettingsGroup.addBoolValueInput("fitCheckerBox", "Generate FitChecker", True, "", True)
+        fitCheckerBox = advancedSettingsGroup.addBoolValueInput("fitCheckerBox", "Generate FitChecker", True, "", True)
         fitCheckerBox.tooltip = "Generates a small helper part to check the fit of the Switches"
         fitCheckerBox.tooltipDescription = ""
 
         # ---------------------------------- 3D PRINTER TAB ----------------------------------------
         printerTab = cmdInputs.addTabCommandInput("printerTab", "3D Printer")
+        # TODO make visible again if the feature exists
+        printerTab.isVisible = False
         printerCildren = printerTab.children
 
         printerSize = printerCildren.addGroupCommandInput("printerSize", "Printer Build Volume")
@@ -149,10 +153,20 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         fileButton.isVisible = False
 
         supportWidth = layoutChildren.addValueInput("supportWidthValue", "Support Keys wider than", "", adsk.core.ValueInput.createByReal(2.0))
+        # TODO make visible again if the feature exists
+        supportWidth.isVisible = False
         supportWidth.tooltip = "Support Keys that are wider than this value in units with stabilizers"
         supportWidth.tooltipDescription = "If a key is wider than one unit (default key size), jamming could become an issue. Stabilizers are available in 2u, 6.25u and 7u. (1 default unit is 19.05mm or 0.75inches)"
 
+        stabilizersTypeDropdown = layoutChildren.addDropDownCommandInput("stabilizersTypeDropdown", "Support Type", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
+        # TODO make visible again if the feature exists
+        stabilizersTypeDropdown.isVisible = False
+        stabilizersTypeDropdown.tooltip = "Select the type of keysupport for long keys"
+        stabilizersTypeDropdown.tooltipDescription = "Choose if you want to support keys by aftermarket Stabilizers, printed guide tracks or leave them unsupported"
+
         doubleSpaceSwitch = layoutChildren.addBoolValueInput("doubleSpaceSwitch", "Double Switch for Space", True, "", False)
+        # TODO make visible again if the feature exists
+        doubleSpaceSwitch.isVisible = False
         doubleSpaceSwitch.tooltip = "Use two switches for the spacebar instead of stabilizers"
         doubleSpaceSwitch.tooltipDescription = "It is an easy way prevent binding of the spacebar by using two switches instead of one switch with stabilizers. I you have spare switches, this may be cheaper than buying a seperate spacer. This is also a good way to stiffen up the spacebar."
 
@@ -250,9 +264,9 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             else:
                 tab.isVisible = False
 
-        elif changedInput.id == 'expertModeBox':
-            button = adsk.core.BoolValueCommandInput.cast(inputs.itemById('expertModeBox'))
-            group = adsk.core.GroupCommandInput.cast(inputs.itemById("expertSettings"))
+        elif changedInput.id == 'advancedSettingsBox':
+            button = adsk.core.BoolValueCommandInput.cast(inputs.itemById('advancedSettingsBox'))
+            group = adsk.core.GroupCommandInput.cast(inputs.itemById("advancedSettings"))
             if changedInput.value:
                 group.isVisible = True
             else:
@@ -338,6 +352,7 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
             keyboardData.frameModule.generateFrame(keyboardData, comp)
 
             progressDialog.hide()
+            app.activeViewport.fit()
         except:
             if ui:
                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
