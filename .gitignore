@@ -1,4 +1,6 @@
 __pycache__/
+resources/models
 .vscode/
 resources/defaultLayouts/ISO62_MOD.json
 resources/defaultLayouts/modified-iso-60%.json
+modules/frames/Test_Frame.py

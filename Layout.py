@@ -101,3 +101,8 @@ def createLayoutSketches(plateSketch: adsk.fusion.Sketch, cutoutSketch: adsk.fus
                 maxX = entry[0] + (entry[2] / 2)
     # creating the outer border
     createPlateBorder(plateSketch, (maxX * keyboardData.unit) + (keyboardData.unit - keyboardData.switchWidth), (keyboardData.keyboardHeightInUnits * keyboardData.unit) + (keyboardData.unit - keyboardData.switchWidth), keyboardData)
+
+
+def createVoidInfill(voidHeight: float):
+    # creates an extrusion for the part of the layout that is not used for keys
+    return None

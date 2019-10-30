@@ -1,9 +1,11 @@
 # Author-Julian Pleines
 # Description-Simple Script to create a 3D-Printable Keyboard
 
+import traceback
 import importlib
 import importlib.util
-import traceback
+import math
+import os
 
 import adsk.cam
 import adsk.core
@@ -12,8 +14,8 @@ import adsk.fusion
 from .LayoutFileParser import parseFile, getDefaultLayouts
 from . import FitChecker
 from . import Layout
-from .KeyboardData import KeyboardData
-from . import Frame
+from .KeyboardData import KeyboardData, microcontrollers, microcontrollerPins
+from .Frame import getFrames, getKeyboardPlateSize
 
 from .modules.frames.AbstractFrame import AbstractFrame
 
@@ -148,6 +150,10 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
             keyboardLayoutDropdown.listItems.add(key, first, "")
             first = False
         keyboardLayoutDropdown.listItems.add("Custom Layout", False, "")
+        # TODO ONLY FOR DEBUGGING, DELETE LATER
+        for layout in keyboardLayoutDropdown.listItems:
+            if layout.name == "ISO 60% (62 Keys)":
+                layout.isSelected = True
 
         fileButton = layoutChildren.addBoolValueInput("fileButton", "Layout JSON", False, "./resources/icons/Folder", False)
         fileButton.isVisible = False
@@ -176,32 +182,56 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         # keyboardLayoutTable.hasGrid = True
         # keyboardLayoutTable.tablePresentationStyle = adsk.core.TablePresentationStyles.itemBorderTablePresentationStyle
 
+        # parse the keyboard layout
+        parseFile(layouts[keyboardLayoutDropdown.selectedItem.name], keyboardData)
+
         # ---------------------------------- FRAME TAB ---------------------------------------------
         frameTab = cmdInputs.addTabCommandInput("frameTab", "Frame")
         frameChildren = frameTab.children
 
         frameDropDown = frameChildren.addDropDownCommandInput("frameDropDown", "Frame Type", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
-        frames = Frame.getFrames()
-        first = True
+        frames = getFrames()
         for key in frames:
-            frameDropDown.listItems.add(key, first, "")
-            first = False
+            if key == "UKC Default":
+                frameDropDown.listItems.add(key, True, "")
+            else:
+                frameDropDown.listItems.add(key, first, "")
+        
+        keyboardData.frameName = frameDropDown.selectedItem.name
+        keyboardData.frame = frames[keyboardData.frameName]
+        loadFrameModule(keyboardData)
+
+        # TODO implement this functionality
+        screwList = keyboardData.frameModule.getSupportedJoinOptions()
+        joiningDropDown = frameChildren.addDropDownCommandInput("joiningDropDown", "Join with", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
+        for item in screwList:
+            joiningDropDown.listItems.add(item, False, "")
+        joiningDropDown.listItems.item(0).isSelected = True
+
+        # TODO show this kind of Notice only if the selected keyboard has mor keys than the controller supports without extensions
+        notice = '<font color="red"><b>Notice:</b> Pro Micro only supports 81 Keys</font>'
+        controllerWarningText = frameChildren.addTextBoxCommandInput("controllerWarningText", "", notice, 1, True)
+        controllerWarningText.isVisible = False
+
+        microControllerDropDown = frameChildren.addDropDownCommandInput("microControllerDropDown", "Controller", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
+        microControllerDropDown.tooltip = "Choose the Microcontroller you are planning to use"
+        for controller in microcontrollers:
+            microControllerDropDown.listItems.add(controller, False, "")
+        microControllerDropDown.listItems.item(0).isSelected = True
+
+        selectedItem = microControllerDropDown.selectedItem
+        if keyboardData.keys > pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):
+            notice = '<font color="red"><b>Notice:</b> ' + selectedItem.name + ' only supports ' + f"{pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):.0f}" + ' Keys</font>'
+            controllerWarningText.formattedText = notice
+            controllerWarningText.isVisible = True
+        else:
+            controllerWarningText.isVisible = False
 
         # ---------------------------------- KEYCAPS TAB -------------------------------------------
         # keycapsTab = cmdInputs.addTabCommandInput("keycapsTab", "Keycaps")
         # keycapsChildren = keycapsTab.children
 
         # keycapsTab.isVisible = False
-
-        # set up the default layout and frame
-        parseFile(layouts[keyboardLayoutDropdown.selectedItem.name], keyboardData)
-        keyboardData.frame = frameDropDown.selectedItem.name
-        name = frames[frameDropDown.selectedItem.name]
-        if name.endswith("_"):
-            cls = getattr(importlib.import_module(".modules.frames." + name, __name__), "Frame")
-        else:
-            cls = getattr(importlib.import_module(".modules.frames." + name, __name__), name)
-        keyboardData.frameModule: AbstractFrame = cls()
 
         # Connect to the execute event.
         onExecute = KCCommandExecuteHandler()
@@ -275,13 +305,21 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
         elif changedInput.id == "frameDropDown":
             dropdown = adsk.core.DropDownCommandInput.cast(inputs.itemById("frameDropDown"))
             selectedItem = dropdown.selectedItem
-            keyboardData.frame = selectedItem.name
-            name = frames[selectedItem.name]
-            if name.endswith("_"):
-                cls = getattr(importlib.import_module(".modules.frames." + name, __name__), "Frame")
+            keyboardData.frameName = selectedItem.name
+            keyboardData.frame = frames[selectedItem.name]
+            loadFrameModule(keyboardData)
+
+        elif changedInput.id == "microControllerDropDown":
+            dropdown = adsk.core.DropDownCommandInput.cast(inputs.itemById("microControllerDropDown"))
+            selectedItem = dropdown.selectedItem
+            keyboardData.microcontroller = selectedItem.name
+            controllerWarningText = adsk.core.TextBoxCommandInput.cast(inputs.itemById('controllerWarningText'))
+            if keyboardData.keys > pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):
+                notice = '<font color="red"><b>Notice:</b> ' + selectedItem.name + ' only supports ' + f"{pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):.0f}" + ' Keys</font>'
+                controllerWarningText.formattedText = notice
+                controllerWarningText.isVisible = True
             else:
-                cls = getattr(importlib.import_module(".modules.frames." + name, __name__), name)
-            keyboardData.frameModule: AbstractFrame = cls()
+                controllerWarningText.isVisible = False
 
 
 class KCDestroyHandler(adsk.core.CommandEventHandler):
@@ -348,8 +386,77 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
             Layout.create(progressDialog, comp, keyboardData)
 
             # --------------------------- FRAME CREATION  -----------------------------------------
-            progressDialog.message = "Creating Frame"
-            keyboardData.frameModule.generateFrame(keyboardData, comp)
+            if keyboardData.frame.isModule:
+                progressDialog.message = "Creating Frame"
+                selectedJoinOption = adsk.core.DropDownCommandInput.cast(inputs.itemById("joiningDropDown")).selectedItem.name
+                keyboardData.frameModule.generateFrame(keyboardData, comp, selectedJoinOption)
+            else:
+                app = adsk.core.Application.get()
+                design = adsk.fusion.Design.cast(app.activeProduct)
+                # root = design.rootComponent
+                root = comp
+                importManager = app.importManager
+                archiveFileName = os.path.dirname(__file__) + "/resources/models/frames/" + keyboardData.frame.filename
+                archiveOptions = importManager.createFusionArchiveImportOptions(archiveFileName)
+                importManager.importToTarget(archiveOptions, root)
+
+                # setting the user Parameters with the right values
+                dimension = getKeyboardPlateSize(keyboardData, comp)
+                param1 = design.userParameters.itemByName("LayoutWidth")
+                param2 = design.userParameters.itemByName("LayoutHeight")
+                param3 = design.userParameters.itemByName("PlateThickness")
+                param4 = design.userParameters.itemByName("InfillVoids")
+                if param1 is not None and param2 is not None and param3 is not None and param4 is not None:
+                    param1.value = dimension[0]
+                    param2.value = dimension[1]
+                    param3.value = keyboardData.plateThickness
+                else:
+                    # TODO create messagebox -> Model does not fulfill requirements
+                    print("else")
+                
+                # create new sketch for the layout plate
+                infillVoids = True if design.userParameters.itemByName("InfillVoids").value >= 1 else False
+                if infillVoids is True:
+                    if design.userParameters.itemByName("VoidHeight") is None:
+                        # TODO create messagebox -> Model does not fulfill requirements
+                        print("else")
+                    else:
+                        voidHeight = design.userParameters.itemByName("VoidHeight").value
+            # --------------------------- COMBINE BODIES ------------------------------------------
+            # If the Frame is created by a Model, combining the Top-Frame and the layoutPlate is done
+                plate = comp.bRepBodies.itemByName("Layout Plate")
+                if plate is None:
+                    print("Plate not found...")
+                # topFrame = comp.allOccurrences.itemByName(keyboardData.frame.filename[:-4]).component.bRepBodies.itemByName("Top")
+                topFrame = comp.allOccurrences.itemByName(keyboardData.frame.filename[:-4] + ":1").bRepBodies.itemByName("Top")
+                if topFrame is not None:
+                    collection = adsk.core.ObjectCollection.create()
+                    collection.add(topFrame)
+                    combineFeatureInput = comp.features.combineFeatures.createInput(plate, collection)
+                    combineFeatureInput.isKeepToolBodies = True
+                    # combineFeatureInput.isNewComponent = False
+                    comp.features.combineFeatures.add(combineFeatureInput)
+                    topFrame.isLightBulbOn = False
+                    plate.name = "Plate"
+                else:
+                    print("Body not found!")
+
+                occ: adsk.fusion.Occurrence
+                for occ in comp.allOccurrences:
+                    print(occ.name)
+                    
+            # --------------------------- FRAME SPLITTING -----------------------------------------
+            # TODO split the frame and any other body neccessary
+
+            # --------------------------- KEYCAP CREATION -----------------------------------------
+            # This is not part of the first Release-Version
+
+            # --------------------------- ADDIND SWITCHES -----------------------------------------
+            # this step is only for demonstration purposes
+            # importManager = app.importManager
+            # archiveFileName = "C:/Users/Julian/AppData/Roaming/Autodesk/Autodesk Fusion 360/API/Scripts/UltimateKeyboardCreator/resources/models/Test.f3d"
+            # archiveOptions = importManager.createFusionArchiveImportOptions(archiveFileName)
+            # importManager.importToTarget(archiveOptions, root)
 
             progressDialog.hide()
             app.activeViewport.fit()
@@ -384,6 +491,26 @@ def openFile():
     except:
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+
+def pinsToMaxSupportedKeys(pins: float) -> float:
+    # maximum achievable keycount is the square of the half of all pins
+    # but reality doesn't let you use half pins, that means if the available
+    # pincount is odd we have to do it a little different.
+    return math.ceil(pins / 2) * math.floor(pins / 2)
+
+
+def loadFrameModule(keyboardData: KeyboardData):
+    if keyboardData.frame.isModule:
+        framename = keyboardData.frame.filename
+        if framename.endswith("_"):
+            cls = getattr(importlib.import_module(".modules.frames." + framename, __name__), "Frame")
+        else:
+            cls = getattr(importlib.import_module(".modules.frames." + framename, __name__), framename)
+        keyboardData.frameModule: AbstractFrame = cls()
+    else:
+        # nothing to do at this moment
+        print("load fusion file")
                 
   
 def stop(context):
