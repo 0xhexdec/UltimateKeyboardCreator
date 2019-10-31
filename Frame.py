@@ -13,7 +13,9 @@ from .KeyboardData import KeyboardData
 class Frame:
     def __init__(self):
         self.isModule = False
+        self.configAvailable = False
         self.filename = ""
+        self.filePath = ""
 
 
 def getFrames() -> dict:
@@ -28,13 +30,19 @@ def getFrames() -> dict:
             frames[name] = frame
     
     dirPath = os.path.dirname(__file__) + "/resources/models/frames"
-    for filename in os.listdir(dirPath):
-        if filename.endswith(".f3d") and filename != "Base.f3d":
-            name = filename.rpartition(".")[0].replace("_", " ")
-            frame = Frame()
-            frame.isModule = False
-            frame.filename = filename
-            frames[name] = frame
+    for dirName in os.listdir(dirPath):
+        print(dirName)
+        for filename in os.listdir(dirPath + "/" + dirName):
+            if filename == "config.json":
+                # parseConfigFile
+                print("config file found")
+            if filename.endswith(".f3d"):
+                name = filename.rpartition(".")[0].replace("_", " ")
+                frame = Frame()
+                frame.isModule = False
+                frame.filename = filename
+                frame.filePath = dirName + "/" + filename
+                frames[name] = frame
     return frames
 
 

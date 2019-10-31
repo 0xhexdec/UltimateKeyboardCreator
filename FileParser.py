@@ -1,5 +1,5 @@
 # Author-Julian Pleines
-# Parses the LayoutFile (json) for any keyboard Layout
+# Parses LayoutFiles (json) for any keyboard Layout and config files for frames
 
 import io
 import json
@@ -39,7 +39,7 @@ def getLayouts(dirPath: str) -> dict:
     return layouts
 
 
-def parseFile(filename: str, keyboardData: KeyboardData):
+def parseLayoutFile(filename: str, keyboardData: KeyboardData):
     # Code to react to the event.
     try:
         app = adsk.core.Application.get()
@@ -110,3 +110,8 @@ def parseFile(filename: str, keyboardData: KeyboardData):
     except:
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+
+def parseConfigFile():
+    # TODO add the config file system
+    return None

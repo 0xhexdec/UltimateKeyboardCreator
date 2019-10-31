@@ -6,7 +6,7 @@ It is specially designed to generate 3D printable files but not restricted to on
 
 The Keyboard is based on hand wired mechanical switches and a microcontroller (Teensy 2.0, Arduino Pro Micro, etc.), thus providing a custom, relatively cheap USB 2.0 compatible keyboard.
 
-The UKC is designed to be extandable by users. The creation of new Frames is done by dropping in python modules that the UKC is handling automatically, see [Adding Parametric Frames](#adding-parametric-frames).
+The UKC is designed to be extandable by users. The creation of new Frames can either be done by dropping in python modules that the UKC is handling automatically, or by dropping in parametric Fusion 360 Models, see [Drop-In Content](#drop-in-content).
 
 ## [Features](#features)
 

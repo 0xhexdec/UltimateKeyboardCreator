@@ -97,6 +97,10 @@ def createLayoutSketches(plateSketch: adsk.fusion.Sketch, cutoutSketch: adsk.fus
             key += 1
             switchCutout(cutoutSketch, (entry[0] * keyboardData.unit) + xOffset, (((keyboardData.keyboardHeightInUnits - 1) - entry[1]) * keyboardData.unit) + yOffset, keyboardData)
             switchHookCutouts(hooksSketch, (entry[0] * keyboardData.unit) + xOffset, (((keyboardData.keyboardHeightInUnits - 1) - entry[1]) * keyboardData.unit) + yOffset, keyboardData)
+            if keyboardData.supportKeySize <= entry[2]:
+                # means the key needs support
+                # TODO add support
+                print("creating Support")
             if entry[0] + (entry[2] / 2) > maxX:
                 maxX = entry[0] + (entry[2] / 2)
     # creating the outer border

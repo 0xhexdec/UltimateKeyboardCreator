@@ -11,7 +11,7 @@ import adsk.cam
 import adsk.core
 import adsk.fusion
 
-from .LayoutFileParser import parseFile, getDefaultLayouts
+from .FileParser import parseLayoutFile, getDefaultLayouts
 from . import FitChecker
 from . import Layout
 from .KeyboardData import KeyboardData, microcontrollers, microcontrollerPins
@@ -183,7 +183,7 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         # keyboardLayoutTable.tablePresentationStyle = adsk.core.TablePresentationStyles.itemBorderTablePresentationStyle
 
         # parse the keyboard layout
-        parseFile(layouts[keyboardLayoutDropdown.selectedItem.name], keyboardData)
+        parseLayoutFile(layouts[keyboardLayoutDropdown.selectedItem.name], keyboardData)
 
         # ---------------------------------- FRAME TAB ---------------------------------------------
         frameTab = cmdInputs.addTabCommandInput("frameTab", "Frame")
@@ -192,10 +192,13 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         frameDropDown = frameChildren.addDropDownCommandInput("frameDropDown", "Frame Type", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
         frames = getFrames()
         for key in frames:
-            if key == "UKC Default":
-                frameDropDown.listItems.add(key, True, "")
+            if frames[key].isModule is True:
+                if key == "UKC Default":
+                    frameDropDown.listItems.add(key, True, "/resources/icons/ModuleImport")
+                else:
+                    frameDropDown.listItems.add(key, first, "/resources/icons/ModuleImport")
             else:
-                frameDropDown.listItems.add(key, first, "")
+                frameDropDown.listItems.add(key, first, "/resources/icons/BooleanNewComponent")
         
         keyboardData.frameName = frameDropDown.selectedItem.name
         keyboardData.frame = frames[keyboardData.frameName]
@@ -284,7 +287,7 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             else:
                 button.isVisible = False
                 keyboardData.layoutName = selectedItem.name
-                parseFile(layouts[selectedItem.name], keyboardData)
+                parseLayoutFile(layouts[selectedItem.name], keyboardData)
 
         elif changedInput.id == 'makePrintableBox':
             button = adsk.core.BoolValueCommandInput.cast(inputs.itemById('makePrintableBox'))
@@ -396,7 +399,7 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
                 # root = design.rootComponent
                 root = comp
                 importManager = app.importManager
-                archiveFileName = os.path.dirname(__file__) + "/resources/models/frames/" + keyboardData.frame.filename
+                archiveFileName = os.path.dirname(__file__) + "/resources/models/frames/" + keyboardData.frame.filePath
                 archiveOptions = importManager.createFusionArchiveImportOptions(archiveFileName)
                 importManager.importToTarget(archiveOptions, root)
 
@@ -486,7 +489,7 @@ def openFile():
         if dlg.showOpen() != adsk.core.DialogResults.DialogOK:
             return
         global keyboardData
-        parseFile(dlg.filename, keyboardData)
+        parseLayoutFile(dlg.filename, keyboardData)
 
     except:
         if ui:

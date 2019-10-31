@@ -26,5 +26,6 @@ class KeyboardData:
         self.frameOverPlateHeight: float = 0.6
         self.unit: float = 1.905
         self.keyboardHeightInUnits: float = 0
+        self.supportKeySize = 2.0
         self.parametricModel: bool = False
         self.fixedSketch: bool = True
