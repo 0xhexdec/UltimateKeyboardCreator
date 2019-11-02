@@ -5,10 +5,10 @@ import adsk.fusion
 import adsk.core
 
 from .Sketch import createPlateBorder, switchCutout, switchHookCutouts, createSwtichPocket
-from .KeyboardData import KeyboardData
+from .KeyboardData import KeyboardObject
 
 
-def create(progressDialog: adsk.core.ProgressDialog, rootComponent: adsk.fusion.Component, keyboardData: KeyboardData):
+def create(progressDialog: adsk.core.ProgressDialog, rootComponent: adsk.fusion.Component, keyboardObject: KeyboardObject):
     trans = adsk.core.Matrix3D.create()
     occ = rootComponent.occurrences.addNewComponent(trans)
 
@@ -27,7 +27,7 @@ def create(progressDialog: adsk.core.ProgressDialog, rootComponent: adsk.fusion.
     fitChecker.name = "FitChecker"
     fitChecker.isLightBulbOn = False
     fitChecker.isComputeDeferred = True
-    createFitCheckerSketch(fitChecker, keyboardData)
+    createFitCheckerSketch(fitChecker, keyboardObject)
     fitChecker.isComputeDeferred = False
 
     frameSketch = sketches.add(xyPlane)
@@ -42,7 +42,7 @@ def create(progressDialog: adsk.core.ProgressDialog, rootComponent: adsk.fusion.
     frameSketch.isComputeDeferred = True
     cutoutSketch.isComputeDeferred = True
     hooksSketch.isComputeDeferred = True
-    createFitCheckerSketches(frameSketch, cutoutSketch, hooksSketch, progressDialog, keyboardData)
+    createFitCheckerSketches(frameSketch, cutoutSketch, hooksSketch, progressDialog, keyboardObject)
     cutoutSketch.isComputeDeferred = False
     hooksSketch.isComputeDeferred = False
     frameSketch.isComputeDeferred = False
@@ -53,7 +53,7 @@ def create(progressDialog: adsk.core.ProgressDialog, rootComponent: adsk.fusion.
     frameProfile = frameSketch.profiles.item(0)
 
     extInput = comp.features.extrudeFeatures.createInput(frameProfile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-    distance = adsk.core.ValueInput.createByReal(keyboardData.plateThickness)
+    distance = adsk.core.ValueInput.createByReal(keyboardObject.plateThickness)
     extInput.setDistanceExtent(False, distance)
     extrude = comp.features.extrudeFeatures.add(extInput)
     extrude.bodies.item(0).name = "FitChecker"
@@ -68,7 +68,7 @@ def create(progressDialog: adsk.core.ProgressDialog, rootComponent: adsk.fusion.
         collection.add(profile)
 
     extInput = comp.features.extrudeFeatures.createInput(collection, adsk.fusion.FeatureOperations.CutFeatureOperation)
-    distance = adsk.core.ValueInput.createByReal(keyboardData.plateThickness)
+    distance = adsk.core.ValueInput.createByReal(keyboardObject.plateThickness)
     extInput.setDistanceExtent(False, distance)
     extrude = comp.features.extrudeFeatures.add(extInput)
 
@@ -80,33 +80,33 @@ def create(progressDialog: adsk.core.ProgressDialog, rootComponent: adsk.fusion.
         collection.add(profile)
 
     extInput = comp.features.extrudeFeatures.createInput(collection, adsk.fusion.FeatureOperations.CutFeatureOperation)
-    distance = adsk.core.ValueInput.createByReal(keyboardData.plateThickness - keyboardData.switchHookHeight)
+    distance = adsk.core.ValueInput.createByReal(keyboardObject.plateThickness - keyboardObject.switchHookHeight)
     extInput.setDistanceExtent(False, distance)
     extrude = comp.features.extrudeFeatures.add(extInput)
 
     occ.isLightBulbOn = False
 
 
-def createFitCheckerSketch(sketch: adsk.fusion.Sketch, keyboardData: KeyboardData):
-    createPlateBorder(sketch, 0.505 + (3.75 * keyboardData.unit),
-                      0.505 + keyboardData.switchHookDepth + (3 * keyboardData.unit), keyboardData)
+def createFitCheckerSketch(sketch: adsk.fusion.Sketch, keyboardObject: KeyboardObject):
+    createPlateBorder(sketch, 0.505 + (3.75 * keyboardObject.unit),
+                      0.505 + keyboardObject.switchHookDepth + (3 * keyboardObject.unit), keyboardObject)
     offset = 0.0
     for y in range(3):
         for x in range(3):
-            createSwtichPocket(sketch, 0.505 + (x + offset) * keyboardData.unit, -(1 + y) * keyboardData.unit, keyboardData)
+            createSwtichPocket(sketch, 0.505 + (x + offset) * keyboardObject.unit, -(1 + y) * keyboardObject.unit, keyboardObject)
         if offset == 0:
             offset = 0.5
         elif offset == 0.5:
             offset = 0.75
 
 
-def createFitCheckerSketches(frameSketch: adsk.fusion.Sketch, cutoutSketch: adsk.fusion.Sketch, hooksSketch: adsk.fusion.Sketch, progressDialog: adsk.core.ProgressDialog, keyboardData: KeyboardData):
-    createPlateBorder(frameSketch, 0.505 + (3.75 * keyboardData.unit), 0.505 + keyboardData.switchHookDepth + (3 * keyboardData.unit), keyboardData)
+def createFitCheckerSketches(frameSketch: adsk.fusion.Sketch, cutoutSketch: adsk.fusion.Sketch, hooksSketch: adsk.fusion.Sketch, progressDialog: adsk.core.ProgressDialog, keyboardObject: KeyboardObject):
+    createPlateBorder(frameSketch, 0.505 + (3.75 * keyboardObject.unit), 0.505 + keyboardObject.switchHookDepth + (3 * keyboardObject.unit), keyboardObject)
     offset = 0.75
     for y in range(3):
         for x in range(3):
-            switchCutout(cutoutSketch, 0.505 + (x + offset) * keyboardData.unit, (1 + y) * keyboardData.unit, keyboardData)
-            switchHookCutouts(hooksSketch, 0.505 + (x + offset) * keyboardData.unit, (1 + y) * keyboardData.unit, keyboardData)
+            switchCutout(cutoutSketch, 0.505 + (x + offset) * keyboardObject.unit, (1 + y) * keyboardObject.unit, keyboardObject)
+            switchHookCutouts(hooksSketch, 0.505 + (x + offset) * keyboardObject.unit, (1 + y) * keyboardObject.unit, keyboardObject)
             progressDialog.progressValue += 1
         if offset == 0.5:
             offset = 0

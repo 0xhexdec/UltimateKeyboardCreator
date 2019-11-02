@@ -11,10 +11,11 @@ import adsk.cam
 import adsk.core
 import adsk.fusion
 
+from .Utils import updateLayoutData
 from .FileParser import parseLayoutFile, getDefaultLayouts
 from . import FitChecker
 from . import Layout
-from .KeyboardData import KeyboardData, microcontrollers, microcontrollerPins
+from .KeyboardData import KeyboardObject, microcontrollers, microcontrollerPins
 from .Frame import getFrames, getKeyboardPlateSize
 from .Sketch import createSplit, createSplitLine
 
@@ -24,7 +25,7 @@ from .modules.frames.AbstractFrame import AbstractFrame
 # Global list to keep all event handlers in scope.
 handlers = []
 progressSteps = 0
-keyboardData: KeyboardData = KeyboardData()
+keyboardObject: KeyboardObject = KeyboardObject()
 # holds all layouts in the layouts folder
 layouts: dict = {}
 # holds all frame modules
@@ -49,6 +50,8 @@ def run(context):
         keyboardCreator.commandCreated.add(commandCreated)
         handlers.append(commandCreated)
 
+        # ui.messageBox("The UltimateKeyboardCreator is currently in alpha state, please be patient and expect bugs. Some features are missing and some maybe don't behave expected.\nSorry for the inconvenience.", "Notice")
+
         # Execute the command.
         keyboardCreator.execute()
 
@@ -67,7 +70,7 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
     def notify(self, args):
         eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
 
-        global keyboardData
+        global keyboardObject
         global layouts
         global frames
 
@@ -90,12 +93,12 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         printableBox.tooltipDescription = "The printable Keyboard is sliced into printable sizes. The parts are equipped with alignment pins and split so they fit your printer"
 
         perspectiveCamerBox = generalChildren.addBoolValueInput("perspectiveCamerBox", "Perspective Camera", True, "", True)
-        perspectiveCamerBox.tooltip = "After the Keyboard is created, a perspective camera is used, otherwise a orthographic camera"
+        perspectiveCamerBox.tooltip = "After the Keyboard is created, a perspective camera is used, otherwise an orthographic camera"
         perspectiveCamerBox.tooltipDescription = "The default camera in CAD software is often the orthographic camera. While easier to model with, it doesn't look like the Model you would hold in your hands. The perspective camera is what you expect."
 
         advancedSettingsBox = generalChildren.addBoolValueInput("advancedSettingsBox", "Advanced Settings", True, "", False)
         advancedSettingsBox.tooltip = "Enables the advanced settings"
-        advancedSettingsBox.tooltipDescription = "USE WITH CAUTION! \nThe advanced settings are for finetuning dimensions for the switches you are using, the spacing between switches (to create non-standard Keyboards) and other advances values."
+        advancedSettingsBox.tooltipDescription = "USE WITH CAUTION! \nThe advanced settings are for finetuning dimensions for the switches you are using, the spacing between switches (to create non-standard Keyboards) and other advanced values."
         
         advancedSettings = generalChildren.addGroupCommandInput("advancedSettings", "Advanced Settings")
         advancedSettings.isExpanded = True
@@ -173,8 +176,6 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         stabilizersTypeDropdown.tooltipDescription = "Choose if you want to support keys by aftermarket Stabilizers, printed guide tracks or leave them unsupported"
 
         doubleSpaceSwitch = layoutChildren.addBoolValueInput("doubleSpaceSwitch", "Double Switch for Space", True, "", False)
-        # TODO make visible again if the feature exists
-        doubleSpaceSwitch.isVisible = False
         doubleSpaceSwitch.tooltip = "Use two switches for the spacebar instead of stabilizers"
         doubleSpaceSwitch.tooltipDescription = "It is an easy way prevent binding of the spacebar by using two switches instead of one switch with stabilizers. I you have spare switches, this may be cheaper than buying a seperate spacer. This is also a good way to stiffen up the spacebar."
 
@@ -185,7 +186,7 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         # keyboardLayoutTable.tablePresentationStyle = adsk.core.TablePresentationStyles.itemBorderTablePresentationStyle
 
         # parse the keyboard layout
-        parseLayoutFile(layouts[keyboardLayoutDropdown.selectedItem.name], keyboardData)
+        parseLayoutFile(layouts[keyboardLayoutDropdown.selectedItem.name], keyboardObject)
 
         # ---------------------------------- FRAME TAB ---------------------------------------------
         frameTab = cmdInputs.addTabCommandInput("frameTab", "Frame")
@@ -202,12 +203,12 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
             else:
                 frameDropDown.listItems.add(key, first, "/resources/icons/BooleanNewComponent")
         
-        keyboardData.frameName = frameDropDown.selectedItem.name
-        keyboardData.frame = frames[keyboardData.frameName]
-        loadFrameModule(keyboardData)
+        keyboardObject.frameName = frameDropDown.selectedItem.name
+        keyboardObject.frame = frames[keyboardObject.frameName]
+        loadFrameModule(keyboardObject)
 
         # TODO implement this functionality
-        screwList = keyboardData.frameModule.getSupportedJoinOptions()
+        screwList = keyboardObject.frameModule.getSupportedJoinOptions()
         joiningDropDown = frameChildren.addDropDownCommandInput("joiningDropDown", "Join with", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
         for item in screwList:
             joiningDropDown.listItems.add(item, False, "")
@@ -224,7 +225,7 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         microControllerDropDown.listItems.item(0).isSelected = True
 
         selectedItem = microControllerDropDown.selectedItem
-        if keyboardData.keys > pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):
+        if keyboardObject.keys > pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):
             notice = '<font color="red"><b>Notice:</b> ' + selectedItem.name + ' only supports ' + f"{pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):.0f}" + ' Keys</font>'
             controllerWarningText.formattedText = notice
             controllerWarningText.isVisible = True
@@ -267,7 +268,7 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
         ui = app.userInterface
         inputs = adsk.core.CommandInputs.cast(eventArgs.firingEvent.sender.commandInputs)
         
-        global keyboardData
+        global keyboardObject
         global frames
 
         changedInput = eventArgs.input
@@ -284,43 +285,41 @@ class KCCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             button = adsk.core.BoolValueCommandInput.cast(inputs.itemById("fileButton"))
             if selectedItem.name == "Custom Layout":
                 button.isVisible = True
-                keyboardData.layoutName = "Custom Layout"
+                keyboardObject.layoutName = "Custom Layout"
             else:
                 button.isVisible = False
-                keyboardData.layoutName = selectedItem.name
-                parseLayoutFile(layouts[selectedItem.name], keyboardData)
+                keyboardObject.layoutName = selectedItem.name
+                parseLayoutFile(layouts[selectedItem.name], keyboardObject)
 
         elif changedInput.id == 'makePrintableBox':
             checkbox = adsk.core.BoolValueCommandInput.cast(inputs.itemById('makePrintableBox'))
             tab = adsk.core.TabCommandInput.cast(inputs.itemById("printerTab"))
-            keyboardData.makePrintable = checkbox.value
-            if checkbox.value:
-                tab.isVisible = True
-            else:
-                tab.isVisible = False
+            keyboardObject.makePrintable = checkbox.value
+            tab.isVisible = checkbox.value
 
         elif changedInput.id == 'advancedSettingsBox':
             checkbox = adsk.core.BoolValueCommandInput.cast(inputs.itemById('advancedSettingsBox'))
             group = adsk.core.GroupCommandInput.cast(inputs.itemById("advancedSettings"))
-            if checkbox.value:
-                group.isVisible = True
-            else:
-                group.isVisible = False
+            group.isVisible = checkbox.value
 
         elif changedInput.id == "frameDropDown":
             dropdown = adsk.core.DropDownCommandInput.cast(inputs.itemById("frameDropDown"))
             selectedItem = dropdown.selectedItem
-            keyboardData.frameName = selectedItem.name
-            keyboardData.frame = frames[selectedItem.name]
-            loadFrameModule(keyboardData)
+            keyboardObject.frameName = selectedItem.name
+            keyboardObject.frame = frames[selectedItem.name]
+            loadFrameModule(keyboardObject)
+
+        elif changedInput.id == "doubleSpaceSwitch":
+            checkbox = adsk.core.BoolValueCommandInput.cast(inputs.itemById("doubleSpaceSwitch"))
+            keyboardObject.doubleSwitchForSpace = checkbox.value
 
         # if the layout is updated, maybe the controller isn't sufficent anymore
         if changedInput.id == "microControllerDropDown" or changedInput.id == "keyboardLayoutDropdown":
             dropdown = adsk.core.DropDownCommandInput.cast(inputs.itemById("microControllerDropDown"))
             selectedItem = dropdown.selectedItem
-            keyboardData.microcontroller = selectedItem.name
+            keyboardObject.microcontroller = selectedItem.name
             controllerWarningText = adsk.core.TextBoxCommandInput.cast(inputs.itemById('controllerWarningText'))
-            if keyboardData.keys > pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):
+            if keyboardObject.keys > pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):
                 notice = '<font color="red"><b>Notice:</b> ' + selectedItem.name + ' only supports ' + f"{pinsToMaxSupportedKeys(microcontrollerPins[selectedItem.name]):.0f}" + ' Keys</font>'
                 controllerWarningText.formattedText = notice
                 controllerWarningText.isVisible = True
@@ -352,7 +351,7 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
     def notify(self, args):
         eventArgs = adsk.core.CommandEventArgs.cast(args)
 
-        global keyboardData
+        global keyboardObject
 
         try:
             app = adsk.core.Application.get()
@@ -366,21 +365,22 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
             progressDialog = ui.createProgressDialog()
             progressDialog.isBackgroundTranslucent = False
             progressDialog.isCancelButtonShown = False
-            totalSteps = keyboardData.keys * 3
+            updateLayoutData(keyboardObject)
+            totalSteps = keyboardObject.keys * 3
             if adsk.core.BoolValueCommandInput.cast(inputs.itemById("fitCheckerBox")).value is True:
                 totalSteps += 9 * 3
             progressDialog.show("Keyboard creation in progress", "Percentage: %p, Current Value: %v, Total steps: %m", 0, totalSteps, 1)
 
-            keyboardData.printerWidth = adsk.core.ValueCommandInput.cast(inputs.itemById("printerWidthValue")).value
-            keyboardData.printerDepth = adsk.core.ValueCommandInput.cast(inputs.itemById("printerDepthValue")).value
-            keyboardData.switchWidth = adsk.core.ValueCommandInput.cast(inputs.itemById("switchWidth")).value
-            keyboardData.switchDepth = adsk.core.ValueCommandInput.cast(inputs.itemById("switchDepth")).value
-            keyboardData.parametricModel = adsk.core.BoolValueCommandInput.cast(inputs.itemById("parametricBox")).value
-            keyboardData.fixedSketch = adsk.core.BoolValueCommandInput.cast(inputs.itemById("fixedSketchBox")).value
+            keyboardObject.printerWidth = adsk.core.ValueCommandInput.cast(inputs.itemById("printerWidthValue")).value
+            keyboardObject.printerDepth = adsk.core.ValueCommandInput.cast(inputs.itemById("printerDepthValue")).value
+            keyboardObject.switchWidth = adsk.core.ValueCommandInput.cast(inputs.itemById("switchWidth")).value
+            keyboardObject.switchDepth = adsk.core.ValueCommandInput.cast(inputs.itemById("switchDepth")).value
+            keyboardObject.parametricModel = adsk.core.BoolValueCommandInput.cast(inputs.itemById("parametricBox")).value
+            keyboardObject.fixedSketch = adsk.core.BoolValueCommandInput.cast(inputs.itemById("fixedSketchBox")).value
 
             # --------------------------- FITCHECKER CREATION  ------------------------------------
             if adsk.core.BoolValueCommandInput.cast(inputs.itemById("fitCheckerBox")).value is True:
-                FitChecker.create(progressDialog, root, keyboardData)
+                FitChecker.create(progressDialog, root, keyboardObject)
 
             # --------------------------- LAYOUT CREATION  ----------------------------------------
             # create new occurence in the root component for a new component
@@ -389,33 +389,33 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
 
             # get the component from the occurence
             comp = occ.component
-            comp.name = keyboardData.layoutName + " Keyboard"
+            comp.name = keyboardObject.layoutName + " Keyboard"
         
-            Layout.create(progressDialog, comp, keyboardData)
+            Layout.create(progressDialog, comp, keyboardObject)
 
             # --------------------------- FRAME CREATION  -----------------------------------------
             # frame is created by a python module
-            if keyboardData.frame.isModule:
+            if keyboardObject.frame.isModule:
                 progressDialog.message = "Creating Frame"
                 selectedJoinOption = adsk.core.DropDownCommandInput.cast(inputs.itemById("joiningDropDown")).selectedItem.name
-                keyboardData.frameModule.generateFrame(keyboardData, comp, selectedJoinOption)
+                keyboardObject.frameModule.generateFrame(keyboardObject, comp, selectedJoinOption)
             # frame is based on a master component
             else:
                 app = adsk.core.Application.get()
                 design = adsk.fusion.Design.cast(app.activeProduct)
                 importManager = app.importManager
-                archiveFileName = os.path.dirname(__file__) + "/resources/models/frames/" + keyboardData.frame.filePath
+                archiveFileName = os.path.dirname(__file__) + "/resources/models/frames/" + keyboardObject.frame.filePath
                 archiveOptions = importManager.createFusionArchiveImportOptions(archiveFileName)
                 success = importManager.importToTarget(archiveOptions, comp)
                 if success is not True:
                     ui.messageBox("Importing of the frame was not successful, please check the model!", "Import Error")
                 
                 occ.isGrounded = True
-                proxy = comp.occurrences.itemByName(keyboardData.frame.filename[:-4] + ":1").createForAssemblyContext(occ)
+                proxy = comp.occurrences.itemByName(keyboardObject.frame.filename[:-4] + ":1").createForAssemblyContext(occ)
                 proxy.isGrounded = True
 
                 # setting the user Parameters with the right values
-                dimension = getKeyboardPlateSize(keyboardData, comp)
+                dimension = getKeyboardPlateSize(keyboardObject, comp)
                 param1 = design.userParameters.itemByName("LayoutWidth")
                 param2 = design.userParameters.itemByName("LayoutHeight")
                 param3 = design.userParameters.itemByName("PlateThickness")
@@ -423,7 +423,7 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
                 if param1 is not None and param2 is not None and param3 is not None and param4 is not None:
                     param1.value = dimension[0]
                     param2.value = dimension[1]
-                    param3.value = keyboardData.plateThickness
+                    param3.value = keyboardObject.plateThickness
                 else:
                     # TODO create messagebox -> Model does not fulfill requirements
                     print("else")
@@ -441,8 +441,8 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
                 plate = comp.bRepBodies.itemByName("Layout Plate")
                 if plate is None:
                     print("Plate not found...")
-                # topFrame = comp.allOccurrences.itemByName(keyboardData.frame.filename[:-4]).component.bRepBodies.itemByName("Top")
-                topFrame = comp.allOccurrences.itemByName(keyboardData.frame.filename[:-4] + ":1").bRepBodies.itemByName("Top")
+                # topFrame = comp.allOccurrences.itemByName(keyboardObject.frame.filename[:-4]).component.bRepBodies.itemByName("Top")
+                topFrame = comp.allOccurrences.itemByName(keyboardObject.frame.filename[:-4] + ":1").bRepBodies.itemByName("Top")
                 if topFrame is not None:
                     collection = adsk.core.ObjectCollection.create()
                     collection.add(topFrame)
@@ -470,8 +470,8 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
             lowerBorderWith = - box.minPoint.y
             max = width if width >= depth else depth
             min = width if width <= depth else depth
-            maxPrinter = keyboardData.printerDepth if keyboardData.printerDepth >= keyboardData.printerWidth else keyboardData.printerWidth
-            minPrinter = keyboardData.printerDepth if keyboardData.printerDepth <= keyboardData.printerWidth else keyboardData.printerWidth
+            maxPrinter = keyboardObject.printerDepth if keyboardObject.printerDepth >= keyboardObject.printerWidth else keyboardObject.printerWidth
+            minPrinter = keyboardObject.printerDepth if keyboardObject.printerDepth <= keyboardObject.printerWidth else keyboardObject.printerWidth
             if max >= maxPrinter or min >= minPrinter:
                 # check how many splits and in wich direction are needed
                 longSplit = math.ceil(max / maxPrinter)
@@ -484,23 +484,23 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
                     xyPlane = comp.xYConstructionPlane
                     splitSketch = sketches.add(xyPlane)
                     splitSketch.name = "Split"
-                    createSplit(splitSketch, keyboardData, width, depth, leftBorderWidth, lowerBorderWith)
+                    createSplit(splitSketch, keyboardObject, width, depth, leftBorderWidth, lowerBorderWith)
                     
-                    if keyboardData.frame.isModule:
+                    if keyboardObject.frame.isModule:
                         bottomFrame = comp.bRepBodies.itemByName("Bottom Frame")
                     else:
-                        bottomFrameOriginal = comp.allOccurrences.itemByName(keyboardData.frame.filename[:-4] + ":1").bRepBodies.itemByName("Bottom")
+                        bottomFrameOriginal = comp.allOccurrences.itemByName(keyboardObject.frame.filename[:-4] + ":1").bRepBodies.itemByName("Bottom")
                         bottomFrameOriginal.isLightBulbOn = False
                         bottomFrame = bottomFrameOriginal.copyToComponent(occ)
 
                     bodiesToSplit = adsk.core.ObjectCollection.create()
                     bodiesToSplit.add(comp.bRepBodies.itemByName("Top Frame"))
-                    if keyboardData.splitBottomStraight is False:
+                    if keyboardObject.splitBottomStraight is False:
                         bodiesToSplit.add(bottomFrame)
                     else:
                         straightSplitSketch = sketches.add(xyPlane)
                         straightSplitSketch.name = "Straight Split"
-                        createSplitLine(straightSplitSketch, keyboardData, width, depth, leftBorderWidth, lowerBorderWith)
+                        createSplitLine(straightSplitSketch, keyboardObject, width, depth, leftBorderWidth, lowerBorderWith)
                         splittingTool = straightSplitSketch.sketchCurves.sketchLines.item(0)
                         splitBodyFeatureInput = comp.features.splitBodyFeatures.createInput(bottomFrame, splittingTool, True)
                         splitBodyFeature = comp.features.splitBodyFeatures.add(splitBodyFeatureInput)
@@ -547,8 +547,6 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
             if ui:
                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
 
-        adsk.terminate()
-
 
 class KCPreviewHandler(adsk.core.CommandEventHandler):
     def __init__(self):
@@ -568,8 +566,8 @@ def openFile():
         dlg.filter = 'JSON File (*.json);;All Files (*.*)'
         if dlg.showOpen() != adsk.core.DialogResults.DialogOK:
             return
-        global keyboardData
-        parseLayoutFile(dlg.filename, keyboardData)
+        global keyboardObject
+        parseLayoutFile(dlg.filename, keyboardObject)
 
     except:
         if ui:
@@ -583,14 +581,14 @@ def pinsToMaxSupportedKeys(pins: float) -> float:
     return math.ceil(pins / 2) * math.floor(pins / 2)
 
 
-def loadFrameModule(keyboardData: KeyboardData):
-    if keyboardData.frame.isModule:
-        framename = keyboardData.frame.filename
+def loadFrameModule(keyboardObject: KeyboardObject):
+    if keyboardObject.frame.isModule:
+        framename = keyboardObject.frame.filename
         if framename.endswith("_"):
             cls = getattr(importlib.import_module(".modules.frames." + framename, __name__), "Frame")
         else:
             cls = getattr(importlib.import_module(".modules.frames." + framename, __name__), framename)
-        keyboardData.frameModule: AbstractFrame = cls()
+        keyboardObject.frameModule: AbstractFrame = cls()
     else:
         # nothing to do at this moment
         print("load fusion file")

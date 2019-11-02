@@ -10,7 +10,9 @@ import adsk.cam
 import adsk.core
 import adsk.fusion
 
-from .KeyboardData import KeyboardData
+from typing import List
+
+from .KeyboardData import KeyboardObject, KeyboardKey
 
 
 # gets all files from the defaultLayouts folder to populate the Dropdown
@@ -29,17 +31,17 @@ def getLayouts(dirPath: str) -> dict:
         if filename.endswith(".json") or filename.endswith(".JSON"):
             with io.open(dirPath + filename, "r", encoding="utf-8-sig") as file:
                 data = file.read()
-                layoutData = json.loads(data)
-                if isinstance(layoutData, list):
-                    if isinstance(layoutData[0], dict):
-                        for key in layoutData[0]:
+                rawLayoutData = json.loads(data)
+                if isinstance(rawLayoutData, list):
+                    if isinstance(rawLayoutData[0], dict):
+                        for key in rawLayoutData[0]:
                             if key == "name":
-                                layouts[layoutData[0][key]] = dirPath + filename
+                                layouts[rawLayoutData[0][key]] = dirPath + filename
 
     return layouts
 
 
-def parseLayoutFile(filename: str, keyboardData: KeyboardData):
+def parseLayoutFile(filename: str, keyboardObject: KeyboardObject):
     # Code to react to the event.
     try:
         app = adsk.core.Application.get()
@@ -47,29 +49,29 @@ def parseLayoutFile(filename: str, keyboardData: KeyboardData):
 
         with io.open(filename, 'r', encoding='utf-8-sig') as file:
             data = file.read()
-            layout = []
-            layoutData = json.loads(data)
+            layout: List[List[KeyboardKey]] = []
+            rawLayoutData = json.loads(data)
             rowPosition = 0.0
             columnPosition = 0.0
             size = 1.0
             heightOffset = 0.0
             keys = 0
-            keyboardData.layoutName = filename.rpartition("/")[2].rpartition(".")[0]
-            if isinstance(layoutData, list):
-                for row in layoutData:
+            keyboardObject.layoutName = filename.rpartition("/")[2].rpartition(".")[0]
+            if isinstance(rawLayoutData, list):
+                for row in rawLayoutData:
                     if isinstance(row, dict):
-                        # meta object available
+                        # meta keyboardObject available
                         for key in row:
                             if key == "name":
-                                keyboardData.layoutName = row[key]
+                                keyboardObject.layoutName = row[key]
                             if key == "author":
-                                keyboardData.author = row[key]
+                                keyboardObject.author = row[key]
                     elif isinstance(row, list):
-                        layoutRow = []
+                        layoutRow: List[KeyboardKey] = []
                         columnPosition = 0.0
                         for entry in row:
                             if isinstance(entry, str):
-                                layoutRow.append([columnPosition + (size / 2), rowPosition + heightOffset, size])
+                                layoutRow.append(KeyboardKey.create(columnPosition + (size / 2), rowPosition + heightOffset, size))
                                 keys += 1
                                 columnPosition += size
                                 size = 1.0
@@ -100,9 +102,9 @@ def parseLayoutFile(filename: str, keyboardData: KeyboardData):
                                 print("something unknown")
                         rowPosition += 1
                         layout.append(layoutRow)
-                    keyboardData.keys = keys
-                    keyboardData.keyboardLayout = layout
-                    keyboardData.keyboardHeightInUnits = rowPosition
+                    keyboardObject.keys = keys
+                    keyboardObject.layoutData = layout
+                    keyboardObject.keyboardHeightInUnits = rowPosition
             else:
                 if ui:
                     ui.messageBox("Layout JSON not parsable!")

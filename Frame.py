@@ -7,7 +7,7 @@ import os
 import adsk.core
 import adsk.fusion
 
-from .KeyboardData import KeyboardData
+from .KeyboardData import KeyboardObject
 
 
 class Frame:
@@ -47,7 +47,7 @@ def getFrames() -> dict:
 
 
 # returns a tuple with width and height as entries
-def getKeyboardPlateSize(keyboardData: KeyboardData, component: adsk.fusion.Component) -> Tuple[float, float]:
+def getKeyboardPlateSize(keyboardObject: KeyboardObject, component: adsk.fusion.Component) -> Tuple[float, float]:
     points = component.sketches.itemByName("Plate").sketchPoints
     x = 0.0
     y = 0.0

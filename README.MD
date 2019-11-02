@@ -161,6 +161,7 @@ As spaces are not allowed in class and module names, thus making frame-names wit
   * Any text (as in the Default *numpad* example)
   * images
 * automatic lengthwise cutting of the keyboard is not supported (yet?)
+* splitting the keyboard in more than 2 parts
 
 ## [Further useless Informations](#further_useless_informations)
 
