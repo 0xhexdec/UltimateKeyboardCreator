@@ -99,7 +99,9 @@ If you are willing to costumize your keyboard from the ground up, you can deacti
   * currently none, coming soon
 * OTHER
   * Keycool 82 (75%)
-  * more coming soon
+  * TADA68 (65%)
+  * WhiteFox Aria (65%)
+  * WhiteFox ISO (65%)
 
 ## [Build-In Frames](#build-in-frames)
 
@@ -159,6 +161,12 @@ As spaces are not allowed in class and module names, thus making frame-names wit
   * Any text (as in the Default *numpad* example)
   * images
 * automatic lengthwise cutting of the keyboard is not supported (yet?)
+
+## [Further useless Informations](#further_useless_informations)
+
+Please, beloved reader and user, if you don't like the code style, found inefficiencies or just wonder how that piece of formatted junk is working anyway, keep in mind that this project is done in my spare time and my first python project till now. Normally, I am more used to hard-typed languages (like C, C++, Kotlin, Java, you name it) at hardware level so this plugin is, besides its obvious function, the project of *writing a plug-in* on its own.
+
+The Idea for this script came a while ago, precisely: the idea for *a* script came a while ago, when I started to use Fusion 360 for modeling a Hydrofoil for Kitesurfing. I had some problems with designing the mast (wich required a airfoil profile) so I asked a friend (who knows a lot of CAD) to help me with this. He used the `ImportSlineCSV` Skript to get the profile in (at that moment, I was like: WHAT? That easy?) but had some problems with the scale (the script uses Fusion's default unit, "cm"). Because the used CSV was in millimeters, I thought: "Hey man, how hard could it be to change that, I am decent at programming, In can do that." (no, there is no "But it was way harder and I coded for an entire month"-moment, sorry, I took literally a minute) But I was a little hooked. I wanted to do more, even though I had to use Python, that untyped, whitespace-sensitive, bracket-free thing of language (I know I could use C++ but that whole compiling-debugging thing with some Fusion crashes left me with the conclusion, python is better for this task). It took over a year to get a good idea for a script that I want. I browsed Thingiverse and stumbled over the [SiCK-68](https://www.thingiverse.com/thing:3478494/files) keyboard by [Fedor Sosin](#special-thanks-to). I really liked the idea of a selfmade keyboard but I didn't liked the layout, that TADA68 isn't my style. I thought about making an "ISO 80%"-SiCK clone but realized, THAT'S my opportunity to create a script that creates a keyboard with different layouts. Started and daaayyum, that went nuts. Too many ideas and my vision to make it extendable and flexible made this project even more complex. But I don't regret anything. Even if nobody is ever reading this wall of text or is ever using this script. I liked and still like developing it. Maybe someone will create his or her own keyboard with this script and likes to type on that better than the keyboard before. That's the biggest honor I can get. By the way, I have written most of the code on my Laptop-Keyboard with a "sometimes-stuck"-W-key. Maybe I should build my own custom keyboard, maybe I should check for a script that allows me to create my own custom keyboard... maybe I should... **shut up and write the rest of the code**. But hey, have you noticed that your spacebar isn't working right? Maybe you should too...
 
 ## [Special Thanks to](#special-thanks-to)
 

@@ -46,14 +46,14 @@ class UKC_Default(AbstractFrame):
         distance = adsk.core.ValueInput.createByReal(keyboardData.plateThickness)
         extInput.setDistanceExtent(False, distance)
         extrude = component.features.extrudeFeatures.add(extInput)
-        extrude.bodies.item(0).name = "TopFrame"
+        extrude.bodies.item(0).name = "Top Frame"
         
         # Sidewalls for bottom Frame
         extInput = component.features.extrudeFeatures.createInput(outerProfile, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
         distance = adsk.core.ValueInput.createByReal(-0.7)
         extInput.setDistanceExtent(False, distance)
         extrude = component.features.extrudeFeatures.add(extInput)
-        extrude.bodies.item(0).name = "BottomFrame"
+        extrude.bodies.item(0).name = "Bottom Frame"
 
         # Closing bottom Frame
         extInput = component.features.extrudeFeatures.createInput(allProfiles, adsk.fusion.FeatureOperations.JoinFeatureOperation)

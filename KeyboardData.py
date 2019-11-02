@@ -26,6 +26,11 @@ class KeyboardData:
         self.frameOverPlateHeight: float = 0.6
         self.unit: float = 1.905
         self.keyboardHeightInUnits: float = 0
+        self.printerWidth: float = 20
+        self.printerDepth: float = 20
         self.supportKeySize = 2.0
+        self.makePrintable = True
+        self.splitFair: bool = True     # split model to equaly sized parts
+        self.splitBottomStraight: bool = True       # use the same top split or not
         self.parametricModel: bool = False
         self.fixedSketch: bool = True

@@ -50,8 +50,8 @@ class AbstractFrame(ABC):
         # TODO add method body
         print("adding LayoutPlateSupport")
 
-    # just return True if your Frame doesn't require a specific split location
-    # the default split
+    # just return true if your Frame doesn't require a specific split location
+    # the default split function will be used
     @abstractmethod
     def splitFrame() -> bool:
         return True

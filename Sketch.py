@@ -12,6 +12,48 @@ def createPlateBorder(sketch: adsk.fusion.Sketch, width: float, height: float, k
     rectangle(sketch, 0, 0, width, height, keyboardData)
 
 
+def createSplit(sketch: adsk.fusion.Sketch, keyboardData: KeyboardData, width: float, depth: float, leftBorderWidth: float, lowerBorderWith: float):
+    # finding split points that match the required size
+    # splitPoints = [0.0] * keyboardData.keyboardLayout.count
+
+    # TODO currently only able to split in half and only widthwise
+    splitFair = True
+    widthToSplit = width / 2 if splitFair else keyboardData.printerWidth
+    splitPoints = []
+    for row in keyboardData.keyboardLayout:
+        splitPoints.append(0.0)
+        for entry in row:
+            pos = (entry[0] + 0.5) * keyboardData.unit + (keyboardData.unit - keyboardData.switchWidth) / 2
+            if pos >= widthToSplit - leftBorderWidth:
+                print(splitPoints[len(splitPoints) - 1])
+                break
+            else:
+                splitPoints[len(splitPoints) - 1] = pos
+    lowest = width
+    for point in splitPoints:
+        lowest = point if point < lowest else lowest
+    
+    # TODO this if is relatively senseless...
+    if width - lowest >= keyboardData.printerWidth:
+        print("Shit, that does not fit on the printer")
+    i = len(splitPoints) * keyboardData.unit + (keyboardData.unit - keyboardData.switchWidth) / 2
+    lastPoint = None
+    for point in splitPoints:
+        if lastPoint is not None:
+            line = sketch.sketchCurves.sketchLines.addByTwoPoints(lastPoint, Point(point, i, 0))
+            line = sketch.sketchCurves.sketchLines.addByTwoPoints(line.endSketchPoint, Point(point, i - keyboardData.unit, 0))
+        else:
+            line = sketch.sketchCurves.sketchLines.addByTwoPoints(Point(point, i, 0), Point(point, i - keyboardData.unit, 0))
+        lastPoint = line.endSketchPoint
+        i -= keyboardData.unit
+    sketch.isLightBulbOn = False
+
+
+def createSplitLine(sketch: adsk.fusion.Sketch, keyboardData: KeyboardData, width: float, depth: float, leftBorderWidth: float, lowerBorderWith: float):
+    sketch.sketchCurves.sketchLines.addByTwoPoints(Point(width / 2 - leftBorderWidth, depth - lowerBorderWith, 0), Point(width / 2 - leftBorderWidth, -lowerBorderWith, 0))
+    sketch.isLightBulbOn = False
+
+
 # only usabe for "user readable" sketches, not used by the UKC for generating bodies
 def createSwtichPocket(sketch: adsk.fusion.Sketch, x: float, y: float, keyboardData: KeyboardData):
     center = sketch.sketchCurves.sketchLines.addTwoPointRectangle(
