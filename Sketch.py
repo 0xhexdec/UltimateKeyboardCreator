@@ -3,6 +3,7 @@ import adsk.fusion
 import adsk.cam
 
 from .KeyboardData import KeyboardObject
+from .Types import SupportType, SupportDirection
 
 orientation = adsk.fusion.DimensionOrientations
 Point = adsk.core.Point3D.create
@@ -130,6 +131,18 @@ def switchHookCutouts(sketch: adsk.fusion.Sketch, x: float, y: float, keyboardOb
     # top hook cutout
     top = rectangle(sketch, x - (keyboardObject.switchHookWidth / 2), y + (keyboardObject.switchDepth / 2),
                     keyboardObject.switchHookWidth, keyboardObject.switchHookDepth, keyboardObject)
+
+
+def supportCutout(cutThroughSketch: adsk.fusion.Sketch, cutLipSketch: adsk.fusion.Sketch, x: float, y: float, supportDirection: SupportDirection, keyboardObject: KeyboardObject):
+    if keyboardObject.supportType == SupportType.CHERRYMX:
+        if supportDirection is SupportDirection.HORIZONTAL:
+            rectangle(cutThroughSketch, x - 0.165, y - 0.7, 0.33, 1.4, keyboardObject)
+            rectangle(cutLipSketch, x - 0.25, y - 0.85, 0.5, 1.7, keyboardObject)
+        elif supportDirection is SupportDirection.VERTICAL:
+            rectangle(cutThroughSketch, x - 0.7, y - 0.165, 1.4, 0.33, keyboardObject)
+            rectangle(cutLipSketch, x - 0.85, y - 0.25, 1.7, 0.5, keyboardObject)
+        else:
+            print("Direction Unknown")
 
 
 def rectangle(sketch: adsk.fusion.Sketch, x: float, y: float, width: float, height: float, keyboardObject: KeyboardObject):

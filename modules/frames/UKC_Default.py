@@ -2,7 +2,7 @@ import adsk.core
 import adsk.fusion
 
 from ...KeyboardData import KeyboardObject
-from ...Frame import getKeyboardPlateSize, getPossibleSupportLocations
+from ...Frame import getKeyboardPlateSize
 from ... import Sketch
 from .AbstractFrame import AbstractFrame
 
@@ -78,7 +78,6 @@ class UKC_Default(AbstractFrame):
         # here I dont need a specific implementation, I am happy with the default implementation but if you want to
         # do something special with the positioning of the Microcontroller you should rewrite this
         super()._addMicrocontrollerFrame(x, y, keyboardObject, component)
-        print("HERE")
 
     def _addLayoutPlateSupport(self, x: float, y: float, keyboardObject: KeyboardObject, component: adsk.fusion.Component):
         # TODO add method body

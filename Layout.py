@@ -6,7 +6,7 @@
 import adsk.fusion
 import adsk.core
 
-from .Sketch import switchCutout, switchHookCutouts, createPlateBorder
+from .Sketch import switchCutout, switchHookCutouts, createPlateBorder, supportCutout
 from .KeyboardData import KeyboardObject
 
 Point = adsk.core.Point3D.create
@@ -104,9 +104,9 @@ def createLayoutSketches(plateSketch: adsk.fusion.Sketch, cutoutSketch: adsk.fus
                 switchCutout(cutoutSketch, (entry.x * keyboardObject.unit) + xOffset, (((keyboardObject.keyboardHeightInUnits - 1) - entry.y) * keyboardObject.unit) + yOffset, keyboardObject)
                 switchHookCutouts(hooksSketch, (entry.x * keyboardObject.unit) + xOffset, (((keyboardObject.keyboardHeightInUnits - 1) - entry.y) * keyboardObject.unit) + yOffset, keyboardObject)
             
-            if entry.isSupported:
-                # means the key needs support
-                # TODO add support
+            if entry.support.isSupported():
+                for support in entry.supports:
+                    supportCutout(cutoutSketch, hooksSketch, (support[0] * keyboardObject.unit) + xOffset, (((keyboardObject.keyboardHeightInUnits - 1) - support[1]) * keyboardObject.unit) + yOffset, entry.support, keyboardObject)
                 print("creating Support")
             
             if entry.x + (entry.width / 2) > maxX:

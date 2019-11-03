@@ -7,15 +7,8 @@ import os
 import adsk.core
 import adsk.fusion
 
+from .Types import Frame
 from .KeyboardData import KeyboardObject
-
-
-class Frame:
-    def __init__(self):
-        self.isModule = False
-        self.configAvailable = False
-        self.filename = ""
-        self.filePath = ""
 
 
 def getFrames() -> dict:

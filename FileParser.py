@@ -12,7 +12,8 @@ import adsk.fusion
 
 from typing import List
 
-from .KeyboardData import KeyboardObject, KeyboardKey
+from .KeyboardData import KeyboardObject
+from .Types import KeyboardKey
 
 
 # gets all files from the defaultLayouts folder to populate the Dropdown
@@ -53,7 +54,8 @@ def parseLayoutFile(filename: str, keyboardObject: KeyboardObject):
             rawLayoutData = json.loads(data)
             rowPosition = 0.0
             columnPosition = 0.0
-            size = 1.0
+            width = 1.0
+            height = 1.0
             heightOffset = 0.0
             keys = 0
             keyboardObject.layoutName = filename.rpartition("/")[2].rpartition(".")[0]
@@ -71,15 +73,16 @@ def parseLayoutFile(filename: str, keyboardObject: KeyboardObject):
                         columnPosition = 0.0
                         for entry in row:
                             if isinstance(entry, str):
-                                layoutRow.append(KeyboardKey.create(columnPosition + (size / 2), rowPosition + heightOffset, size))
+                                layoutRow.append(KeyboardKey.create(columnPosition + (width / 2), rowPosition + heightOffset, width, height))
                                 keys += 1
-                                columnPosition += size
-                                size = 1.0
+                                columnPosition += width
+                                width = 1.0
+                                height = 1.0
                                 heightOffset = 0.0
                             elif isinstance(entry, dict):
                                 for key in entry:
                                     if key == "w":
-                                        size = entry[key]
+                                        width = entry[key]
                                     if key == "w2":
                                         # rowPosition += entry["y"]
                                         print("w2 argument not handled")
@@ -95,6 +98,7 @@ def parseLayoutFile(filename: str, keyboardObject: KeyboardObject):
                                         print("y2 argument not handled")
                                     if key == "h":
                                         heightOffset = (entry[key] - 1.0) / 2.0
+                                        height = entry[key]
                                     if key == "h2":
                                         # rowPosition += entry["y"]
                                         print("h2 argument not handled")
