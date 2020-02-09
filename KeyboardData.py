@@ -3,8 +3,8 @@
 from typing import List
 
 
-microcontrollers = ["Arduino Pro Micro", "Arduino Micro", "Arduino Uno", "Arduino Leonardo", "Teensy 2.0"]
-microcontrollerPins = {"Arduino Pro Micro": 18, "Arduino Micro": 20, "Arduino Uno": 20, "Arduino Leonardo": 20, "Teensy 2.0": 25}
+microcontrollers = ["Arduino Pro Micro", "Arduino Micro", "Arduino Uno", "Arduino Leonardo", "Teensy 2.0", "Bluepill"]
+microcontrollerPins = {"Arduino Pro Micro": 18, "Arduino Micro": 20, "Arduino Uno": 20, "Arduino Leonardo": 20, "Teensy 2.0": 25, "Bluepill": 32}
 
 
 class KeyboardObject:
@@ -37,6 +37,7 @@ class KeyboardObject:
         self.doubleSwitchForSpace: bool = False
         self.makePrintable: bool = True
         self.splitFair: bool = True     # split model to equaly sized parts
+        self.splitCenteredBetweenSwitches: bool = False
         self.splitBottomStraight: bool = True       # use the same top split or not
         self.parametricModel: bool = False
         self.fixedSketch: bool = True

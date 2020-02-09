@@ -129,10 +129,13 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
 
         printerSize = printerCildren.addGroupCommandInput("printerSize", "Printer Build Volume")
         printerSize.isExpanded = True
-        printerSize.isVisible = True
         printerSizeGroup = printerSize.children
-        printerSizeGroup.addValueInput("printerWidthValue", "X", "mm", adsk.core.ValueInput.createByReal(20))
-        printerSizeGroup.addValueInput("printerDepthValue", "Y", "mm", adsk.core.ValueInput.createByReal(20))
+        valueInput = printerSizeGroup.addValueInput("printerWidthValue", "X", "mm", adsk.core.ValueInput.createByReal(20))
+        valueInput.tooltip = "The width your printer is able to print"
+        valueInput.tooltipDescription = "If your printer isn't square, the UKC tries to find the best orientation to split your Keyboard."
+        valueInput = printerSizeGroup.addValueInput("printerDepthValue", "Y", "mm", adsk.core.ValueInput.createByReal(20))
+        valueInput.tooltip = "The depth your printer is able to print"
+        valueInput.tooltipDescription = "If your printer isn't square, the UKC tries to find the best orientation to split your Keyboard."
 
         # TODO make visible again if the feature exists
         fitOptimizationValue = printerCildren.addValueInput("fitOptimizationValue", "Fit Optimization", "mm", adsk.core.ValueInput.createByReal(0.0))
@@ -207,9 +210,10 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         keyboardObject.frame = frames[keyboardObject.frameName]
         loadFrameModule(keyboardObject)
 
-        # TODO implement this functionality
         screwList = keyboardObject.frameModule.getSupportedJoinOptions()
         joiningDropDown = frameChildren.addDropDownCommandInput("joiningDropDown", "Join with", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
+        # TODO make visible again if the feature exits
+        joiningDropDown.isVisible = False
         for item in screwList:
             joiningDropDown.listItems.add(item, False, "")
         joiningDropDown.listItems.item(0).isSelected = True
@@ -219,6 +223,8 @@ class KCCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         controllerWarningText.isVisible = False
 
         microControllerDropDown = frameChildren.addDropDownCommandInput("microControllerDropDown", "Controller", adsk.core.DropDownStyles.LabeledIconDropDownStyle)
+        # TODO make visible again if the feature exits
+        microControllerDropDown.isVisible = False
         microControllerDropDown.tooltip = "Choose the Microcontroller you are planning to use"
         for controller in microcontrollers:
             microControllerDropDown.listItems.add(controller, False, "")
@@ -464,62 +470,62 @@ class KCCommandExecuteHandler(adsk.core.CommandEventHandler):
             # to be problematic
 
             box = comp.bRepBodies.itemByName("Top Frame").boundingBox
-            width = box.maxPoint.x - box.minPoint.x
-            depth = box.maxPoint.y - box.minPoint.y
-            leftBorderWidth = - box.minPoint.x
-            lowerBorderWith = - box.minPoint.y
-            max = width if width >= depth else depth
-            min = width if width <= depth else depth
-            maxPrinter = keyboardObject.printerDepth if keyboardObject.printerDepth >= keyboardObject.printerWidth else keyboardObject.printerWidth
-            minPrinter = keyboardObject.printerDepth if keyboardObject.printerDepth <= keyboardObject.printerWidth else keyboardObject.printerWidth
-            if max >= maxPrinter or min >= minPrinter:
-                # check how many splits and in wich direction are needed
-                longSplit = math.ceil(max / maxPrinter)
-                shortSplit = math.ceil(min / minPrinter)
-                print("long:" + str(longSplit))
-                print("short:" + str(shortSplit))
+            # width = box.maxPoint.x - box.minPoint.x
+            # depth = box.maxPoint.y - box.minPoint.y
+            # leftBorderWidth = - box.minPoint.x
+            # lowerBorderWith = - box.minPoint.y
+            # max = width if width >= depth else depth
+            # min = width if width <= depth else depth
+            # maxPrinter = keyboardObject.printerDepth if keyboardObject.printerDepth >= keyboardObject.printerWidth else keyboardObject.printerWidth
+            # minPrinter = keyboardObject.printerDepth if keyboardObject.printerDepth <= keyboardObject.printerWidth else keyboardObject.printerWidth
+            # if max >= maxPrinter or min >= minPrinter:
+            #     # check how many splits and in wich direction are needed
+            #     longSplit = math.ceil(max / maxPrinter)
+            #     shortSplit = math.ceil(min / minPrinter)
+            #     print("long:" + str(longSplit))
+            #     print("short:" + str(shortSplit))
 
-                if longSplit > 1 or shortSplit > 1:
-                    sketches = comp.sketches
-                    xyPlane = comp.xYConstructionPlane
-                    splitSketch = sketches.add(xyPlane)
-                    splitSketch.name = "Split"
-                    createSplit(splitSketch, keyboardObject, width, depth, leftBorderWidth, lowerBorderWith)
-                    
-                    if keyboardObject.frame.isModule:
-                        bottomFrame = comp.bRepBodies.itemByName("Bottom Frame")
-                    else:
-                        bottomFrameOriginal = comp.allOccurrences.itemByName(keyboardObject.frame.filename[:-4] + ":1").bRepBodies.itemByName("Bottom")
-                        bottomFrameOriginal.isLightBulbOn = False
-                        bottomFrame = bottomFrameOriginal.copyToComponent(occ)
-
-                    bodiesToSplit = adsk.core.ObjectCollection.create()
-                    bodiesToSplit.add(comp.bRepBodies.itemByName("Top Frame"))
-                    if keyboardObject.splitBottomStraight is False:
-                        bodiesToSplit.add(bottomFrame)
-                    else:
-                        straightSplitSketch = sketches.add(xyPlane)
-                        straightSplitSketch.name = "Straight Split"
-                        createSplitLine(straightSplitSketch, keyboardObject, width, depth, leftBorderWidth, lowerBorderWith)
-                        splittingTool = straightSplitSketch.sketchCurves.sketchLines.item(0)
-                        splitBodyFeatureInput = comp.features.splitBodyFeatures.createInput(bottomFrame, splittingTool, True)
-                        splitBodyFeature = comp.features.splitBodyFeatures.add(splitBodyFeatureInput)
-                        i = 1
-                        for body in splitBodyFeature.bodies:
-                            body.name = "Bottom Frame (Part " + str(i) + ")"
-                            i += 1
-                    splittingTool = splitSketch.sketchCurves.sketchLines.item(0)
-                    splitBodyFeatureInput = comp.features.splitBodyFeatures.createInput(bodiesToSplit, splittingTool, True)
-                    splitBodyFeature = comp.features.splitBodyFeatures.add(splitBodyFeatureInput)
-                    body: adsk.fusion.BRepBody
-                    i = 1
-                    for body in splitBodyFeature.bodies:
-                        body.name = "Top Frame (Part " + str(i) + ")"
-                        i += 1
-                    
+            #     if longSplit > 1 or shortSplit > 1:
+            sketches = comp.sketches
+            xyPlane = comp.xYConstructionPlane
+            splitSketch = sketches.add(xyPlane)
+            splitSketch.name = "Split"
+            createSplit(splitSketch, box, keyboardObject)
+            
+            if keyboardObject.frame.isModule:
+                bottomFrame = comp.bRepBodies.itemByName("Bottom Frame")
             else:
-                # no split is needed
-                print("no split is needed")
+                bottomFrameOriginal = comp.allOccurrences.itemByName(keyboardObject.frame.filename[:-4] + ":1").bRepBodies.itemByName("Bottom")
+                bottomFrameOriginal.isLightBulbOn = False
+                bottomFrame = bottomFrameOriginal.copyToComponent(occ)
+
+            bodiesToSplit = adsk.core.ObjectCollection.create()
+            bodiesToSplit.add(comp.bRepBodies.itemByName("Top Frame"))
+            if keyboardObject.splitBottomStraight is False:
+                bodiesToSplit.add(bottomFrame)
+            else:
+                straightSplitSketch = sketches.add(xyPlane)
+                straightSplitSketch.name = "Straight Split"
+                createSplitLine(straightSplitSketch, box, keyboardObject)
+                splittingTool = straightSplitSketch.sketchCurves.sketchLines.item(0)
+                splitBodyFeatureInput = comp.features.splitBodyFeatures.createInput(bottomFrame, splittingTool, True)
+                splitBodyFeature = comp.features.splitBodyFeatures.add(splitBodyFeatureInput)
+                i = 1
+                for body in splitBodyFeature.bodies:
+                    body.name = "Bottom Frame (Part " + str(i) + ")"
+                    i += 1
+            splittingTool = splitSketch.sketchCurves.sketchLines.item(0)
+            splitBodyFeatureInput = comp.features.splitBodyFeatures.createInput(bodiesToSplit, splittingTool, True)
+            splitBodyFeature = comp.features.splitBodyFeatures.add(splitBodyFeatureInput)
+            body: adsk.fusion.BRepBody
+            i = 1
+            for body in splitBodyFeature.bodies:
+                body.name = "Top Frame (Part " + str(i) + ")"
+                i += 1
+                    
+            # else:
+            #     # no split is needed
+            #     print("no split is needed")
             # --------------------------- KEYCAP CREATION -----------------------------------------
             # This is not part of the first Release-Version
 

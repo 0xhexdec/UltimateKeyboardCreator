@@ -1,6 +1,6 @@
 # UltimateKeyboardCreator - *Currently in Alpha*
 
-The **UKC** is an open source skript for creating your own fully customized mechanical keyboard within Autodesk's [Fusion360](https://www.autodesk.com/products/fusion-360/overview#banner) (PC/Mac - [free for every hobbyist](https://www.autodesk.com/campaigns/fusion-360-for-hobbyists))
+The **UKC** is an open source skript for creating your own customized mechanical keyboard within Autodesk's [Fusion360](https://www.autodesk.com/products/fusion-360/overview#banner) (PC/Mac - [free for every hobbyist](https://www.autodesk.com/campaigns/fusion-360-for-hobbyists))
 
 It is specially designed to generate 3D printable files but not restricted to only 3D printing.
 
@@ -10,7 +10,7 @@ The UKC is designed to be extandable by users. The creation of new Frames can ei
 
 ## [Features](#features)
 
-The UKC is build around the Cherry MX type switches and provides an easy to use creation of predefined keyboards that are as modifyable as possible without any knowlege in CAD. The UKC is also able to create only the layout plate to allow the free modeling of the surrounding frame. The free modeling of a fully custom Keyboard is **NOT** part of the UKC and will never be.
+The UKC is build around the Cherry MX type switches and provides an easy to use creation of predefined keyboards that are as modifyable as possible without any knowlege in CAD. The UKC is also able to create only the layout plate to allow the free modeling of the surrounding frame.
 
 ### What you can do with UKC
 
@@ -27,7 +27,7 @@ The UKC is build around the Cherry MX type switches and provides an easy to use 
 
 ### Planned Features
 
-* Creating custom keycaps
+see [Roadmap](#roadmap)
 
 ## [How to run it](#how-to-run-it)
 
@@ -161,7 +161,59 @@ As spaces are not allowed in class and module names, thus making frame-names wit
   * Any text (as in the Default *numpad* example)
   * images
 * automatic lengthwise cutting of the keyboard is not supported (yet?)
-* splitting the keyboard in more than 2 parts
+* splitting the keyboard in more than 2 parts (I am working on it)
+* no feasibility analysis of the layout
+
+## [Roadmap](#roadmap)
+
+This Roadmap is just to see what may come in the near future.
+
+To give you an idea how long things take to be complete, here is a table with circa values of progress.
+| Tag | Work Done | Meaning |
+|---| :---: | --- |
+| Done | 100% | Feature complete
+| Almost Done | > 90% | minor tweaks needed
+| Needs Work | > 70% | Corner cases not handled
+| Basic Function | > 40% | Testing case works
+| Prototype | > 0% | testing solution approaches
+| Todo | not started yet | Nothing done
+
+### Features added in *ALPHA* ***(Needs Work)***
+
+* create layout plate
+  * Layout generation from presets ***(Done)***
+  * Custom Layouts by parsing a [KLE](http://www.keyboard-layout-editor.com/#/)-json ***(Done)***
+* create keyboard frames
+  * load frames created by python modules ***(Done)***
+  * load frames created by Fusion360 Models ***(Done)***
+* Split the frames to printable sizes ***(Needs work)***
+* key support "options"
+  * add CherryMX styled stabilizers ***(Done)***
+  * double switch for space option ***(Done)***
+* add basic Frame as python module ***(Basic Function)***
+* add basic frame as Fusion360 model ***(Needs Work)***
+
+### Features added in *BETA* ***(Todo)***
+
+* *Config-File-System* for frames based on Models
+  * Models can support multiple controller holder ***(Todo)***
+  * Joining screw diameter restrictions configured by creator ***(Todo)***
+  * Meta Data (author, website,...) ***(Todo)***
+  * Notice (information displayed on frame page after selection) ***(Todo)***
+* Frame Tab customization for Module-based Frames
+  * get specific inputs from the User only your Frame needs ***(Todo)***
+  * easier creation of Modules ***(Todo)***
+* Preview as complete Keyboard with inserted Switches  ***(Todo)***
+* UI rework ***(Todo)***
+
+### Features added in *RELEASE* ***(Todo)***
+
+* Keycap Generation  ***(Todo)***
+* UI rework ***(Todo)***
+
+### *AFTER-RELEASE* Features
+
+Since I have a ton of other ideas for the UKC to make it better, easier, more featurerich, faster, and what ever else, I need to keep them secret! Not to protect these, more to not tease features that may never come to life. So after the *Release-Version*, there will be further development if needed!
 
 ## [Further useless Informations](#further_useless_informations)
 

@@ -1,3 +1,7 @@
+import webbrowser
+import math
+from typing import List
+
 import adsk.core
 import adsk.fusion
 import adsk.cam
@@ -13,46 +17,110 @@ def createPlateBorder(sketch: adsk.fusion.Sketch, width: float, height: float, k
     rectangle(sketch, 0, 0, width, height, keyboardObject)
 
 
-def createSplit(sketch: adsk.fusion.Sketch, keyboardObject: KeyboardObject, width: float, depth: float, leftBorderWidth: float, lowerBorderWith: float):
-    # finding split points that match the required size
+def createSplit(sketch: adsk.fusion.Sketch, box: adsk.core.BoundingBox3D, keyboardObject: KeyboardObject):
+    # definitions for the split
+    minBridgeWidth = (keyboardObject.unit - keyboardObject.switchWidth) / 2
+    minBridgeHeight = (keyboardObject.unit - keyboardObject.switchDepth) / 2
 
+    width = box.maxPoint.x - box.minPoint.x
+    depth = box.maxPoint.y - box.minPoint.y
+    leftBorderWidth = - box.minPoint.x
+    lowerBorderWith = - box.minPoint.y
     # TODO currently only able to split in half and only widthwise
     # TODO handle key.switches and key.supports
-    splitFair = True
-    widthToSplit = width / 2 if splitFair else keyboardObject.printerWidth
-    splitPoints = []
-
-    for row in keyboardObject.layoutData:
-        splitPoints.append(0.0)
-        for entry in row:
-            pos = (entry.x + 0.5) * keyboardObject.unit + (keyboardObject.unit - keyboardObject.switchWidth) / 2
-            if pos >= widthToSplit - leftBorderWidth:
-                print(splitPoints[len(splitPoints) - 1])
-                break
-            else:
-                splitPoints[len(splitPoints) - 1] = pos
-
-    lowest = width
-    for point in splitPoints:
-        lowest = point if point < lowest else lowest
+    if depth > keyboardObject.printerDepth and depth > keyboardObject.printerWidth:
+        # TODO check for the better dimension to split
+        print("Needs to split in 2 Dimensions...")
+    elif depth < keyboardObject.printerDepth and depth > keyboardObject.printerWidth:
+        print("use printer depth as Y axis")
+        dimensionX = keyboardObject.printerWidth
+        dimensionY = keyboardObject.printerDepth
+    elif depth > keyboardObject.printerDepth and depth < keyboardObject.printerWidth:
+        print("use printer width as Y axis")
+        dimensionX = keyboardObject.printerDepth
+        dimensionY = keyboardObject.printerWidth
+    elif depth < keyboardObject.printerDepth and depth < keyboardObject.printerWidth:
+        print("both dimensions are possible")
+        # TODO use the better one
+        dimensionX = keyboardObject.printerDepth
+        dimensionY = keyboardObject.printerWidth
+    else:
+        print("The splitted objects are exactly the printer size, treated as smaller printer. If the printer is a little bigger, change the value in the input")
     
-    # TODO this if is relatively senseless...
-    if width - lowest >= keyboardObject.printerWidth:
-        print("Shit, that does not fit on the printer")
-    i = len(splitPoints) * keyboardObject.unit + (keyboardObject.unit - keyboardObject.switchWidth) / 2
-    lastPoint = None
-    for point in splitPoints:
-        if lastPoint is not None:
-            line = sketch.sketchCurves.sketchLines.addByTwoPoints(lastPoint, Point(point, i, 0))
-            line = sketch.sketchCurves.sketchLines.addByTwoPoints(line.endSketchPoint, Point(point, i - keyboardObject.unit, 0))
+    numberOfYSplits = math.ceil(width / dimensionX)
+    widthToSplit: float = width / numberOfYSplits if keyboardObject.splitFair else keyboardObject.printerWidth
+    print("Splitting this keyboard to " + str(widthToSplit * 10) + "mm parts")
+    splitXPosition = widthToSplit
+    splitPointsList: List[List[float]] = []
+    lowestX = width
+    done: bool = False
+    # TODO do this more advanced by checking for supports and key distances
+    while not done:
+        splitPoints: List[float] = []
+        for row in keyboardObject.layoutData:
+            # splitPoints.append(0.0)
+            matchingSwitchFound: bool = False
+            for entry in row:
+                pos = (entry.x + 0.5) * keyboardObject.unit + minBridgeWidth
+                if pos >= splitXPosition - leftBorderWidth:
+                    matchingSwitchFound = True
+                    if keyboardObject.splitCenteredBetweenSwitches:
+                        # TODO add this
+                        print("Do something here")
+                    else:
+                        if splitXPosition - leftBorderWidth > pos - keyboardObject.unit:
+                            splitPoints.append(pos - keyboardObject.unit)
+                        else:
+                            splitPoints.append(splitXPosition - leftBorderWidth)
+                    print(str((splitPoints[len(splitPoints) - 1] + leftBorderWidth) * 10) + "mm")
+                    lowestX = splitPoints[len(splitPoints) - 1] if lowestX > splitPoints[len(splitPoints) - 1] else lowestX
+                    break
+            if not matchingSwitchFound:
+                splitPoints.append(splitXPosition - leftBorderWidth)
+        splitPointsList.append(splitPoints)
+        if lowestX + widthToSplit > width:
+            done = True
         else:
-            line = sketch.sketchCurves.sketchLines.addByTwoPoints(Point(point, i, 0), Point(point, i - keyboardObject.unit, 0))
-        lastPoint = line.endSketchPoint
-        i -= keyboardObject.unit
-    sketch.isLightBulbOn = False
+            print("lowest x is: " + str(lowestX * 10) + "mm")
+            splitXPosition = lowestX + widthToSplit
+            lowestX = width
+
+    # lowest = width
+    # for point in splitPoints:
+    #     lowest = point if point < lowest else lowest
+    # # show user this message if splitting wasn't successful
+    # if width - lowest >= keyboardObject.printerWidth:
+    #     print("Shit, that does not fit on the printer")
+    #     app = adsk.core.Application.get()
+    #     ui = app.userInterface
+    #     text = "UKC was unable to slice the Keyboard to fit your printer.\nIf you think this should be possible, please try to recreate this error (using same inputs) and create an issue here: https://github.com/0xhexdec/UltimateKeyboardCreator/issues/\nPress OK to open this URL in your browser."
+    #     button = ui.messageBox(text, "Slicing Error", 1)
+    #     if button == adsk.core.DialogResults.DialogCancel:
+    #         print("canceled")
+    #     elif button == adsk.core.DialogResults.DialogOK:
+    #         webbrowser.open_new("https://github.com/0xhexdec/UltimateKeyboardCreator/issues/")
+
+    # create splitline
+    for splitPoints in splitPointsList:
+        i = len(splitPoints) * keyboardObject.unit + (keyboardObject.unit - keyboardObject.switchWidth) / 2
+        lastPoint: adsk.fusion.SketchPoint = None
+        for point in splitPoints:
+            if lastPoint is not None:
+                if lastPoint.geometry.x != point:
+                    line = sketch.sketchCurves.sketchLines.addByTwoPoints(lastPoint, Point(point, i, 0))
+                line = sketch.sketchCurves.sketchLines.addByTwoPoints(line.endSketchPoint, Point(point, i - keyboardObject.unit, 0))
+            else:
+                line = sketch.sketchCurves.sketchLines.addByTwoPoints(Point(point, i, 0), Point(point, i - keyboardObject.unit, 0))
+            lastPoint = line.endSketchPoint
+            i -= keyboardObject.unit
+    # sketch.isLightBulbOn = False
 
 
-def createSplitLine(sketch: adsk.fusion.Sketch, keyboardObject: KeyboardObject, width: float, depth: float, leftBorderWidth: float, lowerBorderWith: float):
+def createSplitLine(sketch: adsk.fusion.Sketch, box: adsk.core.BoundingBox3D, keyboardObject: KeyboardObject):
+    width = box.maxPoint.x - box.minPoint.x
+    depth = box.maxPoint.y - box.minPoint.y
+    leftBorderWidth = - box.minPoint.x
+    lowerBorderWith = - box.minPoint.y
     sketch.sketchCurves.sketchLines.addByTwoPoints(Point(width / 2 - leftBorderWidth, depth - lowerBorderWith, 0), Point(width / 2 - leftBorderWidth, -lowerBorderWith, 0))
     sketch.isLightBulbOn = False
 
